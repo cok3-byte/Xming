@@ -126,7 +126,7 @@ static const char GLServerExtensions[] =
 ** supported across all screens in a multi-screen system.
 */
 static char GLXServerVendorName[] = "SGI";
-static char GLXServerVersion[] = "1.2";
+static char GLXServerVersion[] = "1.3";
 static char GLXServerExtensions[] =
 			"GLX_ARB_multisample "
 			"GLX_EXT_visual_info "

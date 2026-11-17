@@ -1017,7 +1017,7 @@ int __glXGetVisualConfigs(__GLXclientState *cl, GLbyte *pc)
 
 
 
-#define __GLX_TOTAL_FBCONFIG_ATTRIBS (28)
+#define __GLX_TOTAL_FBCONFIG_ATTRIBS (30)
 #define __GLX_FBCONFIG_ATTRIBS_LENGTH (__GLX_TOTAL_FBCONFIG_ATTRIBS * 2)
 /**
  * Send the set of GLXFBConfigs to the client.  There is not currently
@@ -1076,6 +1076,9 @@ int DoGetFBConfigs(__GLXclientState *cl, unsigned screen, GLboolean do_swap)
 	WRITE_PAIR( GLX_VISUAL_ID,        modes->visualID );
 	WRITE_PAIR( GLX_FBCONFIG_ID,      modes->visualID );
 	WRITE_PAIR( GLX_X_RENDERABLE,     GL_TRUE );
+	WRITE_PAIR( GLX_DRAWABLE_TYPE,    GLX_WINDOW_BIT | GLX_PIXMAP_BIT );
+	WRITE_PAIR( GLX_RENDER_TYPE,
+		    modes->rgbMode ? GLX_RGBA_BIT : GLX_COLOR_INDEX_BIT );
 
 	WRITE_PAIR( GLX_RGBA,             modes->rgbMode );
 	WRITE_PAIR( GLX_DOUBLEBUFFER,     modes->doubleBufferMode );
