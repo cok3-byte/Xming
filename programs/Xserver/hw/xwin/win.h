@@ -1008,6 +1008,17 @@ winMouseProc (DeviceIntPtr pDeviceInt, int iState);
 int
 winMouseWheel (ScreenPtr pScreen, int iDeltaZ);
 
+int
+winMouseHWheel (ScreenPtr pScreen, int iDeltaX);
+
+
+/*
+ * winprocarg.c
+ */
+
+int
+winGetSystemDPI (void);
+
 void
 winMouseButtonsSendEvent (int iEventType, int iButton);
 

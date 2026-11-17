@@ -27,6 +27,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   la barra de tareas.
 - Rueda horizontal del ratón (botones X 6 y 7).
 ### Changed
+- Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
+  por el escalado de Windows, y el DPI por defecto es el del sistema en lugar de 75 (`-dpi`
+  sigue mandando). Las aplicaciones X que no escalan solas se verán más pequeñas.
 - Los botones laterales del ratón (atrás/adelante) pasan de 6/7 a 8/9, la convención de X;
   6/7 quedan para la rueda horizontal.
 - El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
