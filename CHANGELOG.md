@@ -36,6 +36,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - XLaunch: con la casilla de compresión, OpenSSH recibe además `ServerAliveInterval=30` para
   que las conexiones lentas no se corten por inactividad.
 ### Changed
+- Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
+  servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
+  tráfico a través de SSH. `-bs` lo desactiva.
 - Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
   por el escalado de Windows, y el DPI por defecto es el del sistema en lugar de 75 (`-dpi`
   sigue mandando). Las aplicaciones X que no escalan solas se verán más pequeñas.

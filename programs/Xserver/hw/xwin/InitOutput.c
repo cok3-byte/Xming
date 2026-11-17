@@ -79,6 +79,9 @@ extern int			g_iLogVerbose;
 Bool				g_fLogInited;
 
 extern Bool			g_fXdmcpEnabled;
+extern int			defaultBackingStore;
+extern Bool			disableBackingStore;
+extern Bool			enableBackingStore;
 extern Bool			g_fAuthEnabled;
 #ifdef HAS_DEVWINDOWS
 extern int			g_fdMessageQueue;
@@ -1063,6 +1066,19 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
 
   /* Log the command line */
   winLogCommandLine (argc, argv);
+
+  /*
+   * Backing store por defecto (+bs -wm): al destapar una ventana X el servidor
+   * restaura su contenido en lugar de enviar Expose, y el cliente no tiene que
+   * redibujarla (caro a traves de un tunel SSH). -bs lo desactiva; se decide
+   * aqui, ya leidos los argumentos, porque +bs ganaria sobre -bs.
+   */
+  if (serverGeneration == 1 && !disableBackingStore)
+    {
+      enableBackingStore = TRUE;
+      if (defaultBackingStore == NotUseful)
+	defaultBackingStore = WhenMapped;
+    }
 
 #if CYGDEBUG
   winDebug ("InitOutput\n");
