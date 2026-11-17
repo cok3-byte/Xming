@@ -30,6 +30,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
+  volver a anunciarlo mientras la aplicación que pegaba aún estaba copiando los datos. Los
+  textos grandes (unos 2 MB o más) llegaban vacíos y el primer pegado tras arrancar fallaba
+  a veces. Ahora espera a que el portapapeles quede libre.
 - `winbuild/build.sh` daba por bueno un build en el que no se había podido compilar el
   servidor (con `make -k` quedaba el `Xming.exe` anterior); ahora lo borra antes de compilar.
 - Clipboard: cada conversión X→Windows se daba por fallida aunque funcionara, porque

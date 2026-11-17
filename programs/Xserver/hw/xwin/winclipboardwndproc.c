@@ -172,6 +172,10 @@ winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
  */
 #define WM_USER_PASTE_COMPLETE		(WM_USER + 1003)
 
+/* Reintento de WM_USER_PASTE_COMPLETE mientras otro proceso tiene el portapapeles */
+#define WIN_PASTE_COMPLETE_TIMER_ID	1
+#define WIN_PASTE_COMPLETE_RETRY_MS	50
+
 LRESULT CALLBACK
 winClipboardWindowProc (HWND hwnd, UINT message, 
 			WPARAM wParam, LPARAM lParam)
@@ -604,8 +608,21 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	  return 0;
 	winDebug ("winClipboardWindowProc - WM_USER_PASTE_COMPLETE\n");
 
-	/* Set up for another delayed rendering callback */
-	OpenClipboard (g_hwndClipboard);
+	/*
+	 * Set up for another delayed rendering callback.
+	 *
+	 * Mientras la aplicación que pegó tenga el portapapeles abierto, sigue
+	 * copiando los datos que acabamos de entregar: vaciarlo ahora (como hacía
+	 * el original sin comprobar OpenClipboard) los sustituía por NULL antes de
+	 * que terminara. Con textos grandes el pegado llegaba vacío, y también
+	 * fallaba a veces el primer pegado. Reintentar cuando se libere.
+	 */
+	if (!OpenClipboard (g_hwndClipboard))
+	  {
+	    SetTimer (hwnd, WIN_PASTE_COMPLETE_TIMER_ID,
+		      WIN_PASTE_COMPLETE_RETRY_MS, NULL);
+	    return 0;
+	  }
 
 	/* Take ownership of the Windows clipboard */
 	EmptyClipboard ();
@@ -621,6 +638,15 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	CloseClipboard ();
       }
       return 0;
+
+    case WM_TIMER:
+      if (wParam == WIN_PASTE_COMPLETE_TIMER_ID)
+	{
+	  KillTimer (hwnd, WIN_PASTE_COMPLETE_TIMER_ID);
+	  PostMessage (hwnd, WM_USER_PASTE_COMPLETE, 0, 0);
+	  return 0;
+	}
+      break;
     }
 
   /* Let Windows perform default processing for unhandled messages */
