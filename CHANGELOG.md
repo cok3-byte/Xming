@@ -30,6 +30,11 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Fixed
 - `winbuild/build.sh` daba por bueno un build en el que no se había podido compilar el
   servidor (con `make -k` quedaba el `Xming.exe` anterior); ahora lo borra antes de compilar.
+- Clipboard: cada conversión X→Windows se daba por fallida aunque funcionara, porque
+  `XConvertSelection` devuelve 1 y no `Success`; el pegado dependía de que la respuesta
+  llegara a tiempo por casualidad.
+- Clipboard: se perdía una copia completa del texto en cada pegado X→Windows (fuga de
+  memoria) y faltaban comprobaciones de memoria al convertir textos.
 - Clipboard: la espera de un pegado podía agotar el timeout aunque la respuesta ya
   estuviera recibida en la cola de Xlib.
 - Crash al arrancar con optimización: los callbacks de XACE recibían punteros a datos de un

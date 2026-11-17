@@ -263,6 +263,13 @@ winClipboardFlushXEvents (HWND hwnd,
 	      goto winClipboardFlushXEvents_SelectionRequest_Done;
 	    }
 	  pszGlobalData = (char *) GlobalLock (hGlobal);
+	  if (pszGlobalData == NULL)
+	    {
+	      ErrorF ("winClipboardFlushXEvents - SelectionRequest - "
+		      "GlobalLock () failed: %08x\n", (int) GetLastError ());
+	      fAbort = TRUE;
+	      goto winClipboardFlushXEvents_SelectionRequest_Done;
+	    }
 
 	  /* Convert the Unicode string to UTF8 (MBCS) */
 	  if (fUseUnicode)
@@ -276,7 +283,15 @@ winClipboardFlushXEvents (HWND hwnd,
 						     NULL,
 						     NULL);
 	      /* NOTE: iConvertDataLen includes space for null terminator */
-	      pszConvertData = (char *) malloc (iConvertDataLen);
+	      pszConvertData = iConvertDataLen > 0
+		? (char *) malloc (iConvertDataLen) : NULL;
+	      if (pszConvertData == NULL)
+		{
+		  ErrorF ("winClipboardFlushXEvents - SelectionRequest - "
+			  "no se pudo reservar %d bytes\n", iConvertDataLen);
+		  fAbort = TRUE;
+		  goto winClipboardFlushXEvents_SelectionRequest_Done;
+		}
 	      WideCharToMultiByte (CP_UTF8,
 				   0,
 				   (LPCWSTR)pszGlobalData,
@@ -289,6 +304,13 @@ winClipboardFlushXEvents (HWND hwnd,
 	  else
 	    {
 	      pszConvertData = strdup (pszGlobalData);
+	      if (pszConvertData == NULL)
+		{
+		  ErrorF ("winClipboardFlushXEvents - SelectionRequest - "
+			  "strdup () failed\n");
+		  fAbort = TRUE;
+		  goto winClipboardFlushXEvents_SelectionRequest_Done;
+		}
 	      iConvertDataLen = strlen (pszConvertData) + 1;
 	    }
 
@@ -480,20 +502,18 @@ winClipboardFlushXEvents (HWND hwnd,
 		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
 			  "Requesting conversion of UTF8 target.\n");
 #endif
-		  iReturn = XConvertSelection (pDisplay,
-					       event.xselection.selection,
-					       XA_STRING,
-					       atomLocalProperty,
-					       iWindow,
-					       CurrentTime);
-		  if (iReturn != Success)
-		    {
-		      ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
-			      "XConvertSelection () failed for UTF8String, "
-			      "aborting: %d\n",
-			      iReturn);
-		      break;
-		    }
+		  /*
+		   * XConvertSelection siempre devuelve 1 (no Success): el
+		   * código original lo trataba como error y abandonaba la
+		   * espera de la conversión. Los errores llegan por el
+		   * manejador de errores de Xlib.
+		   */
+		  XConvertSelection (pDisplay,
+				     event.xselection.selection,
+				     XA_STRING,
+				     atomLocalProperty,
+				     iWindow,
+				     CurrentTime);
 
 		  /* Process the ConvertSelection event */
 		  XFlush (pDisplay);
@@ -506,20 +526,13 @@ winClipboardFlushXEvents (HWND hwnd,
 		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
 			  "Requesting conversion of CompoundText target.\n");
 #endif
-		  iReturn = XConvertSelection (pDisplay,
-					       event.xselection.selection,
-					       atomUTF8String,
-					       atomLocalProperty,
-					       iWindow,
-					       CurrentTime);
-		  if (iReturn != Success)
-		    {
-		      ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
-			      "XConvertSelection () failed for CompoundText, "
-			      "aborting: %d\n",
-			      iReturn);
-		      break;
-		    }
+		  /* Ver la nota anterior sobre el valor de retorno */
+		  XConvertSelection (pDisplay,
+				     event.xselection.selection,
+				     atomUTF8String,
+				     atomLocalProperty,
+				     iWindow,
+				     CurrentTime);
 
 		  /* Process the ConvertSelection event */
 		  XFlush (pDisplay);
@@ -618,22 +631,40 @@ winClipboardFlushXEvents (HWND hwnd,
 	      /* Conversion succeeded or some unconvertible characters */
 	      if (ppszTextList != NULL)
 		{
+		  int iOffset = 0;
+
 		  for (i = 0; i < iCount; i++)
 		    {
 		      iReturnDataLen += strlen(ppszTextList[i]);
 		    }
 		  pszReturnData = malloc (iReturnDataLen + 1);
-		  pszReturnData[0] = '\0';
+		  if (pszReturnData == NULL)
+		    {
+		      ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
+			      "malloc failed for %d bytes, aborting.\n",
+			      iReturnDataLen + 1);
+		      fAbort = TRUE;
+		      goto winClipboardFlushXEvents_SelectionNotify_Done;
+		    }
+		  /* Copia con desplazamiento: strcat en bucle era O(n^2) */
 		  for (i = 0; i < iCount; i++)
 		    {
-		      strcat (pszReturnData, ppszTextList[i]);
+		      size_t len = strlen (ppszTextList[i]);
+		      memcpy (pszReturnData + iOffset, ppszTextList[i], len);
+		      iOffset += len;
 		    }
+		  pszReturnData[iOffset] = '\0';
 		}
 	      else
 		{
 		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
 			  "X*TextPropertyToTextList list_return is NULL.\n");
 		  pszReturnData = malloc (1);
+		  if (pszReturnData == NULL)
+		    {
+		      fAbort = TRUE;
+		      goto winClipboardFlushXEvents_SelectionNotify_Done;
+		    }
 		  pszReturnData[0] = '\0';
 		}
 	    }
@@ -654,6 +685,11 @@ winClipboardFlushXEvents (HWND hwnd,
 		  break;
 		}
 	      pszReturnData = malloc (1);
+	      if (pszReturnData == NULL)
+		{
+		  fAbort = TRUE;
+		  goto winClipboardFlushXEvents_SelectionNotify_Done;
+		}
 	      pszReturnData[0] = '\0';
 	    }
 
@@ -771,6 +807,8 @@ winClipboardFlushXEvents (HWND hwnd,
 
 	winClipboardFlushXEvents_SelectionNotify_Done:
 	  /* Free allocated resources */
+	  if (pszReturnData)
+	    free (pszReturnData);	/* antes no se liberaba: fuga en cada pegado */
 	  if (ppszTextList)
 	    XFreeStringList (ppszTextList);
 	  if (xtpText.value)
