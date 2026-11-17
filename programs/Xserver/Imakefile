@@ -1039,7 +1039,10 @@ XWINLIBS = PreFbLibs $(XWINLIB) FbPostFbLibs $(XWINLIB) $(XWINLAYERLIB) \
 #if BuildXWinMultiWindow || BuildXWinClipboard
 XWINX11  = $(XONLYLIB)	   
 # if defined(Win32Architecture)
-PTHREADLIB = -lpthreadGC2
+#  ifndef XWinPThreadLib
+#   define XWinPThreadLib -lpthreadGC2
+#  endif
+PTHREADLIB = XWinPThreadLib
 # endif
 #endif
 #if defined(Win32Architecture)

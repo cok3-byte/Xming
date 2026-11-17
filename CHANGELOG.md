@@ -16,6 +16,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Changed
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que
   imake y make funcionen en Windows.
+- El código se adapta a gcc 16 y a las cabeceras de mingw-w64 (choques de nombres entre
+  X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
 - El bootstrap de imake no compilaba fuera de compilación cruzada y no podía usar `/tmp` en
