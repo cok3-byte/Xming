@@ -59,6 +59,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- `-auth` rechazaba a veces clientes con la cookie correcta: el servidor leía el fichero de
+  autorización en modo texto, así que una cookie con un byte `0x1A` o con CR LF llegaba
+  corrompida (aproximadamente 1 de cada 15 cookies aleatorias).
 - El build con MSYS2 convertía las rutas Unix de los `-D` (por ejemplo `/usr/X11R6` pasaba a
   `C:/msys64/usr/X11R6`), así que Xming no reubicaba a su carpeta ni las fuentes ni
   `rgb.txt`: no encontraba ninguna fuente en disco ni los nombres de color.
