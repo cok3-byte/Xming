@@ -37,6 +37,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   que las conexiones lentas no se corten por inactividad.
 - `winbuild/tests/sshtest.py`: pruebas del backing store y de cómo lanza XLaunch a Xming y ssh.
 - README: cómo usar aplicaciones remotas por SSH, cuándo comprimir y cómo medir.
+- Fuentes bitmap en `dist/fonts/` (`misc`, `75dpi` y `100dpi`, unos 15 MB comprimidas), con
+  `fonts.dir` y `fonts.alias`: `fixed` y las fuentes Unicode que usa xterm ya existen y las
+  aplicaciones dejan de avisar de fuentes que faltan.
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra

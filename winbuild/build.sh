@@ -96,6 +96,25 @@ done
 # Quitar restos de imake (Makefile, Imakefile...) de los datos copiados
 find "$DIST/xkb" \( -name 'Makefile*' -o -name 'Imakefile' -o -name '*.dep' \) -delete
 
+# Fuentes bitmap: el font path por defecto apunta a <directorio del exe>\fonts\{misc,75dpi,
+# 100dpi}. libXfont lee BDF comprimidas con gzip, así que no hace falta bdftopcf ni
+# mkfontdir: fonts.dir se genera con el nombre XLFD de la línea FONT de cada BDF (el
+# lector toma como nombre el resto de la línea, que puede llevar espacios).
+# Pocos procesos (crear procesos en MSYS2 es caro): un awk para todos los nombres y
+# gzip en paralelo por lotes.
+for d in misc 75dpi 100dpi; do
+    src="fonts/bdf/$d"
+    out="$DIST/fonts/$d"
+    mkdir -p "$out"
+    (cd "$src" && awk '/^FONT /{sub(/^FONT /, ""); sub(/\r$/, ""); print FILENAME ".gz " $0; nextfile}' *.bdf) \
+        > "$out/fonts.dir.tmp"
+    { wc -l < "$out/fonts.dir.tmp" | tr -d ' '; cat "$out/fonts.dir.tmp"; } > "$out/fonts.dir"
+    rm -f "$out/fonts.dir.tmp"
+    cp "$src"/*.bdf "$out/"
+    find "$out" -name '*.bdf' -print0 | xargs -0 -n 32 -P "$JOBS" gzip -9 -n
+    if [ -f "$src/fonts.alias" ]; then cp "$src/fonts.alias" "$out/"; fi
+done
+
 # Base de datos de locales de Xlib: Xming fija XLOCALEDIR=<directorio del exe>\locale.
 # Sin ella el WM multiwindow y el clipboard terminan con "Locale not supported by X".
 # BuildServersOnly no genera nls/, así que se preprocesa aquí con la misma regla que
