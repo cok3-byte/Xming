@@ -266,6 +266,8 @@ int fIP=0;
 
 
 /* case insensitive versions of strcmp and strncmp */
+/* mingw-w64 ya declara stricmp en string.h: usar un nombre propio */
+#define stricmp rman_stricmp
 
 static int
 stricmp(const char *s1, const char *s2)

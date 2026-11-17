@@ -139,7 +139,8 @@ RootlessAccelInit(ScreenPtr pScreen)
 
     s = xalloc(sizeof(rlAccelScreenRec));
     if (!s) return FALSE;
-    RLACCELREC(pScreen) = s;
+    /* Un cast no es un lvalue en gcc moderno */
+    pScreen->devPrivates[rlAccelScreenPrivateIndex].ptr = (pointer) s;
 
     // Wrap the screen functions we need
     s->CreateGC = pScreen->CreateGC;

@@ -66,7 +66,7 @@ RootlessCreateWindow(WindowPtr pWin)
     Bool result;
     RegionRec saveRoot;
 
-    WINREC(pWin) = NULL;
+    SET_WINREC(pWin, NULL);
 
     SCREEN_UNWRAP(pWin->drawable.pScreen, CreateWindow);
 
@@ -107,7 +107,7 @@ RootlessDestroyFrame(WindowPtr pWin, RootlessWindowPtr winRec)
 #endif
 
     xfree(winRec);
-    WINREC(pWin) = NULL;
+    SET_WINREC(pWin, NULL);
 }
 
 
@@ -353,7 +353,7 @@ RootlessEnsureFrame(WindowPtr pWin)
     winRec->pixmap = NULL;
     winRec->wid = NULL;
 
-    WINREC(pWin) = winRec;
+    SET_WINREC(pWin, winRec);
 
 #ifdef SHAPE
     // Set the frame's shape if the window is shaped
@@ -370,7 +370,7 @@ RootlessEnsureFrame(WindowPtr pWin)
     {
         RL_DEBUG_MSG("implementation failed to create frame!\n");
         xfree(winRec);
-        WINREC(pWin) = NULL;
+        SET_WINREC(pWin, NULL);
         return NULL;
     }
 
@@ -1298,8 +1298,8 @@ RootlessReparentWindow(WindowPtr pWin, WindowPtr pPriorParent)
 
         /* Switch the frame record from one to the other. */
 
-        WINREC(pWin) = NULL;
-        WINREC(pTopWin) = winRec;
+        SET_WINREC(pWin, NULL);
+        SET_WINREC(pTopWin, winRec);
 
         RootlessInitializeFrame(pTopWin, winRec);
         RootlessReshapeFrame(pTopWin);

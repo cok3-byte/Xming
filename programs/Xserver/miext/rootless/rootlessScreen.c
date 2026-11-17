@@ -568,7 +568,7 @@ RootlessAllocatePrivates(ScreenPtr pScreen)
 
     s = xalloc(sizeof(RootlessScreenRec));
     if (! s) return FALSE;
-    SCREENREC(pScreen) = s;
+    SET_SCREENREC(pScreen, s);
 
     s->pixmap_data = NULL;
     s->pixmap_data_size = 0;

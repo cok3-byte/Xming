@@ -139,6 +139,12 @@ typedef struct _RootlessScreenRec {
 #define WINREC(pWin) \
     ((RootlessWindowRec *)(pWin)->devPrivates[rootlessWindowPrivateIndex].ptr)
 
+// Un cast no es un lvalue en gcc moderno: asignar a través del puntero genérico
+#define SET_WINREC(pWin, rec) \
+    ((pWin)->devPrivates[rootlessWindowPrivateIndex].ptr = (pointer)(rec))
+#define SET_SCREENREC(pScreen, rec) \
+    ((pScreen)->devPrivates[rootlessScreenPrivateIndex].ptr = (pointer)(rec))
+
 
 // Call a rootless implementation function.
 // Many rootless implementation functions are allowed to be NULL.
