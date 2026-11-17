@@ -54,6 +54,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Un ratón del que Windows informa con 3 botones podía hacer leer a Xming fuera del mapa de
   botones al pulsar un botón lateral.
 
+- XLaunch: los mensajes de error al cargar un `.xlaunch` podían desbordar un búfer con un
+  nombre de fichero largo.
 - Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
   volver a anunciarlo mientras la aplicación que pegaba aún estaba copiando los datos. Los
   textos grandes (unos 2 MB o más) llegaban vacíos y el primer pegado tras arrancar fallaba
