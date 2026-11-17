@@ -112,7 +112,8 @@ SOFTWARE.
 #endif
 
 #ifdef WIN32
-#include <windows.h>
+/* Xwindows.h aísla los nombres de X11 (Status, ControlMask...) de los de Win32 */
+#include <X11/Xwindows.h>
 #define FileName(file) file.cFileName
 #undef TEXT
 #undef ALTERNATE

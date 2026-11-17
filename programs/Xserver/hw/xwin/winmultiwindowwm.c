@@ -62,7 +62,7 @@
 #endif
 
 /* Local headers */
-#include "objbase.h"
+/* objbase.h ya lo incluye ddraw.h protegiendo el macro Status */
 #include "ddraw.h"
 #include "winwindow.h"
 #ifdef XWIN_MULTIWINDOWEXTWM

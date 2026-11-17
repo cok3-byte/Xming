@@ -47,7 +47,11 @@ from The Open Group.
 #include <xkbsrv.h>
 #endif
 #ifdef RELOCATE_PROJECTROOT
+/* xkbsrv.h define Status como int; las cabeceras COM lo usan como nombre */
+#pragma push_macro("Status")
+#undef Status
 #include <shlobj.h>
+#pragma pop_macro("Status")
 typedef HRESULT (*SHGETFOLDERPATHPROC)(
     HWND hwndOwner,
     int nFolder,
