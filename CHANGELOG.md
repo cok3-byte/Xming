@@ -22,6 +22,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Changed
 - El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
   XLaunch pasa `-noclipboard` cuando se desmarca la casilla.
+- El clipboard usa `AddClipboardFormatListener` (Vista o posterior) en lugar de la cadena de
+  visores de Windows, que se rompía cuando otra aplicación no reenviaba los mensajes (por
+  ejemplo, Escritorio remoto). En sistemas sin esa API se mantiene la cadena.
 - Al pegar en Windows desde X se pide primero `UTF8_STRING`, que ofrecen casi todos los
   clientes modernos, en lugar de `COMPOUND_TEXT`.
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que

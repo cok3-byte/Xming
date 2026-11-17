@@ -44,7 +44,38 @@ extern void		CheckConnections();
  */
 
 #define WIN_CLIPBOARD_PROP	"cyg_clipboard_prop"
-#define WIN_POLL_TIMEOUT	1
+
+/* WINVER=0x0501 oculta estas definiciones de Vista en winuser.h */
+#ifndef WM_CLIPBOARDUPDATE
+#define WM_CLIPBOARDUPDATE	0x031D
+#endif
+
+/*
+ * AddClipboardFormatListener (Vista+) sustituye a la cadena de visores
+ * (SetClipboardViewer), que se rompe si otra aplicación no reenvía los
+ * mensajes. Se resuelve en tiempo de ejecución para seguir funcionando en XP.
+ */
+typedef BOOL (WINAPI *CLIPBOARDLISTENERPROC) (HWND);
+static CLIPBOARDLISTENERPROC	s_pfnAddClipboardFormatListener;
+static CLIPBOARDLISTENERPROC	s_pfnRemoveClipboardFormatListener;
+static Bool			s_fClipboardListener = FALSE;
+
+static Bool
+winClipboardAddListener (HWND hwnd)
+{
+  HMODULE hUser32 = GetModuleHandle ("user32.dll");
+
+  if (hUser32 == NULL)
+    return FALSE;
+  s_pfnAddClipboardFormatListener = (CLIPBOARDLISTENERPROC)
+    GetProcAddress (hUser32, "AddClipboardFormatListener");
+  s_pfnRemoveClipboardFormatListener = (CLIPBOARDLISTENERPROC)
+    GetProcAddress (hUser32, "RemoveClipboardFormatListener");
+  if (s_pfnAddClipboardFormatListener == NULL
+      || s_pfnRemoveClipboardFormatListener == NULL)
+    return FALSE;
+  return (*s_pfnAddClipboardFormatListener) (hwnd) ? TRUE : FALSE;
+}
 
 
 /*
@@ -190,9 +221,17 @@ winClipboardWindowProc (HWND hwnd, UINT message,
       {
 	winDebug ("winClipboardWindowProc - WM_DESTROY\n");
 
-	/* Remove ourselves from the clipboard chain */
-	ChangeClipboardChain (hwnd, s_hwndNextViewer);
-	
+	if (s_fClipboardListener)
+	  {
+	    (*s_pfnRemoveClipboardFormatListener) (hwnd);
+	    s_fClipboardListener = FALSE;
+	  }
+	else
+	  {
+	    /* Remove ourselves from the clipboard chain */
+	    ChangeClipboardChain (hwnd, s_hwndNextViewer);
+	  }
+
 	s_hwndNextViewer = NULL;
 
 	PostQuitMessage (0);
@@ -205,7 +244,21 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	HWND first, next;
 	DWORD error_code = 0;
 	winDebug ("winClipboardWindowProc - WM_CREATE\n");
-	
+
+	/* Preferir el listener del sistema (Vista+) a la cadena de visores */
+	if (winClipboardAddListener (hwnd))
+	  {
+	    s_fClipboardListener = TRUE;
+	    /*
+	     * El listener no envía un aviso inicial como SetClipboardViewer,
+	     * así que no hay primer mensaje que ignorar.
+	     */
+	    s_fCBCInitialized = TRUE;
+	    winErrorFVerb (1, "winClipboardWindowProc - WM_CREATE - "
+			   "using AddClipboardFormatListener\n");
+	    return 0;
+	  }
+
 	first = GetClipboardViewer();			/* Get handle to first viewer in chain. */
 	if (first == hwnd) return 0;			/* Make sure it's not us! */
 	/* Add ourselves to the clipboard viewer chain */
@@ -262,6 +315,10 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	DWORD error_code = 0;
 	winDebug ("winClipboardWindowProc - WM_WM_REINIT: Enter\n");
 
+	/* Con el listener del sistema no hay cadena que reparar */
+	if (s_fClipboardListener)
+	  return 0;
+
 	first = GetClipboardViewer();			/* Get handle to first viewer in chain. */
 	if (first == hwnd) return 0;			/* Make sure it's not us! */
 	winDebug ("  WM_WM_REINIT: Replacing us(%x) with %x at head "
@@ -284,6 +341,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
       return 0;
 
 
+    case WM_CLIPBOARDUPDATE:	/* listener del sistema: misma lógica, sin cadena */
     case WM_DRAWCLIPBOARD:
       {
 	static Bool s_fProcessingDrawClipboard = FALSE;
@@ -300,6 +358,11 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	if (! s_fProcessingDrawClipboard) 
 	  {
 	    s_fProcessingDrawClipboard = TRUE;
+	  }
+	else if (s_fClipboardListener)
+	  {
+	    /* Sin cadena no hay bucle que romper: ignorar la llamada anidada */
+	    return 0;
 	  }
 	else
 	  {
