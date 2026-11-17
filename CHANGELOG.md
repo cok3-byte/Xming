@@ -47,6 +47,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   (lo usa `glXImportContextEXT`). Faltan los pbuffers.
 - El log de Xming dice qué driver OpenGL de Windows dibuja GLX, y avisa si es el
   renderizador por software de Microsoft ("GDI Generic").
+- `winbuild/tests/gltest.py`: pruebas de OpenGL indirecto con `glxinfo`, `glxgears` y una
+  sonda de GLX 1.3 desde WSL.
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
