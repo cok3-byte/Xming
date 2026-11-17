@@ -61,6 +61,7 @@ RESTYPE __glXSwapBarrierRes;
 int __glXBadContext, __glXBadContextState, __glXBadDrawable, __glXBadPixmap;
 int __glXBadContextTag, __glXBadCurrentWindow;
 int __glXBadRenderRequest, __glXBadLargeRequest;
+int __glXBadFBConfig, __glXBadWindow;
 int __glXUnsupportedPrivateRequest;
 
 /*

@@ -43,7 +43,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Fuentes del usuario: `%APPDATA%\Xming\fonts` y cada subcarpeta suya con `fonts.dir` se
   añaden al font path al arrancar, sin permisos de administrador.
 - `winbuild/tests/fonttest.py`: pruebas de fuentes contra clientes X reales en WSL.
-
+- GLX 1.3: `glXCreateWindow`/`glXDestroyWindow`, `glXQueryDrawable` y `glXQueryContext`
+  (lo usa `glXImportContextEXT`). Faltan los pbuffers.
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra

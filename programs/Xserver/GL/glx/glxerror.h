@@ -53,6 +53,8 @@ extern int __glXBadCurrentWindow;
 extern int __glXBadContextTag;
 extern int __glXBadRenderRequest;
 extern int __glXBadLargeRequest;
+extern int __glXBadFBConfig;
+extern int __glXBadWindow;
 extern int __glXUnsupportedPrivateRequest;
 
 #endif

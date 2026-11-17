@@ -374,6 +374,52 @@ int __glXSwapClientInfo(__GLXclientState *cl, GLbyte *pc)
     return __glXClientInfo(cl, pc);
 }
 
+int __glXSwapCreateWindow(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXCreateWindowReq *req = (xGLXCreateWindowReq *) pc;
+    __GLX_DECLARE_SWAP_VARIABLES;
+
+    if (cl->client->req_len < (sz_xGLXCreateWindowReq >> 2))
+	return BadLength;
+    __GLX_SWAP_SHORT(&req->length);
+    __GLX_SWAP_INT(&req->screen);
+    __GLX_SWAP_INT(&req->fbconfig);
+    __GLX_SWAP_INT(&req->window);
+    __GLX_SWAP_INT(&req->glxwindow);
+    __GLX_SWAP_INT(&req->numAttribs);
+    return DoCreateGLXWindow(cl);
+}
+
+int __glXSwapDestroyWindow(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXDestroyWindowReq *req = (xGLXDestroyWindowReq *) pc;
+    __GLX_DECLARE_SWAP_VARIABLES;
+
+    __GLX_SWAP_SHORT(&req->length);
+    __GLX_SWAP_INT(&req->glxwindow);
+    return DoDestroyGLXWindow(cl, req->glxwindow);
+}
+
+int __glXSwapGetDrawableAttributes(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXGetDrawableAttributesReq *req = (xGLXGetDrawableAttributesReq *) pc;
+    __GLX_DECLARE_SWAP_VARIABLES;
+
+    __GLX_SWAP_SHORT(&req->length);
+    __GLX_SWAP_INT(&req->drawable);
+    return DoGetDrawableAttributes(cl, req->drawable);
+}
+
+int __glXSwapQueryContext(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXQueryContextReq *req = (xGLXQueryContextReq *) pc;
+    __GLX_DECLARE_SWAP_VARIABLES;
+
+    __GLX_SWAP_SHORT(&req->length);
+    __GLX_SWAP_INT(&req->context);
+    return DoQueryContext(cl, req->context);
+}
+
 int __glXSwapQueryContextInfoEXT(__GLXclientState *cl, GLbyte *pc)
 {
     xGLXQueryContextInfoEXTReq *req = (xGLXQueryContextInfoEXTReq *) pc;

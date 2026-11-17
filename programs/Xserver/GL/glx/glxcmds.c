@@ -521,6 +521,10 @@ int DoMakeCurrent( __GLXclientState *cl,
     GLint error;
     GLuint  mask;
 
+    /* A GLXWindow (GLX 1.3) stands for its X window. */
+    drawId = __glXResolveDrawableId(drawId);
+    readId = __glXResolveDrawableId(readId);
+
     /*
     ** If one is None and the other isn't, it's a bad match.
     */
@@ -1274,7 +1278,7 @@ int __glXSwapBuffers(__GLXclientState *cl, GLbyte *pc)
     DrawablePtr pDraw;
     xGLXSwapBuffersReq *req = (xGLXSwapBuffersReq *) pc;
     GLXContextTag tag = req->contextTag;
-    XID drawId = req->drawable;
+    XID drawId = __glXResolveDrawableId(req->drawable);
     __GLXpixmap *pGlxPixmap;
     __GLXcontext *glxc = NULL;
     int error, rc;
@@ -1358,6 +1362,244 @@ int __glXSwapBuffers(__GLXclientState *cl, GLbyte *pc)
     return Success;
 }
 
+
+/*****************************************************************************/
+/*
+** GLX 1.3 windows.  A GLXWindow is an alias of an X window: the GLX requests
+** that take a drawable resolve it to the X window first, so rendering and
+** buffer swaps go through the same path as for a plain window.  Two resources
+** share one record: the GLXWindow id (owned by the creating client) and a
+** link on the X window id, so destroying either one frees the other.
+*/
+
+typedef struct {
+    XID glxwindow;
+    XID window;
+} __GLXwindowAlias;
+
+RESTYPE __glXWindowRes;
+RESTYPE __glXWindowLinkRes;
+
+int __glXWindowGone(pointer value, XID id)
+{
+    __GLXwindowAlias *alias = (__GLXwindowAlias *) value;
+
+    FreeResourceByType(alias->window, __glXWindowLinkRes, TRUE);
+    __glXFree(alias);
+    return Success;
+}
+
+int __glXWindowLinkGone(pointer value, XID id)
+{
+    __GLXwindowAlias *alias = (__GLXwindowAlias *) value;
+
+    /* The X window is gone: the GLXWindow is no longer usable. */
+    FreeResourceByType(alias->glxwindow, __glXWindowRes, FALSE);
+    return Success;
+}
+
+XID __glXResolveDrawableId(XID id)
+{
+    __GLXwindowAlias *alias;
+
+    if (id == None)
+	return id;
+    alias = (__GLXwindowAlias *) LookupIDByType(id, __glXWindowRes);
+    return alias ? alias->window : id;
+}
+
+/* Fields already in host byte order (the swap dispatcher converts them). */
+int DoCreateGLXWindow(__GLXclientState *cl)
+{
+    ClientPtr client = cl->client;
+    xGLXCreateWindowReq *req = (xGLXCreateWindowReq *) client->requestBuffer;
+    __GLXwindowAlias *alias;
+    __GLcontextModes *modes;
+    WindowPtr pWin;
+    int rc;
+
+    if (client->req_len < (sz_xGLXCreateWindowReq >> 2) ||
+	req->numAttribs > (client->req_len - (sz_xGLXCreateWindowReq >> 2)) / 2)
+	return BadLength;
+
+    LEGAL_NEW_RESOURCE(req->glxwindow, client);
+
+    if (req->screen >= screenInfo.numScreens) {
+	client->errorValue = req->screen;
+	return BadValue;
+    }
+    rc = dixLookupWindow(&pWin, req->window, client, DixUnknownAccess);
+    if (rc != Success) {
+	client->errorValue = req->window;
+	return BadWindow;
+    }
+    if (pWin->drawable.pScreen->myNum != req->screen)
+	return BadMatch;
+
+    /* FBConfig ids are the GLX visual ids (see DoGetFBConfigs). */
+    modes = _gl_context_modes_find_visual(__glXActiveScreens[req->screen].modes,
+					  req->fbconfig);
+    if (modes == NULL) {
+	client->errorValue = req->fbconfig;
+	return __glXBadFBConfig;
+    }
+    if (wVisual(pWin) != modes->visualID)
+	return BadMatch;
+
+    /* A window can have only one GLXWindow (GLX 1.3, section 3.3.4). */
+    if (LookupIDByType(req->window, __glXWindowLinkRes))
+	return BadAlloc;
+
+    alias = (__GLXwindowAlias *) __glXMalloc(sizeof(__GLXwindowAlias));
+    if (!alias)
+	return BadAlloc;
+    alias->glxwindow = req->glxwindow;
+    alias->window = req->window;
+
+    /* On failure AddResource calls the delete function, which frees alias. */
+    if (!AddResource(req->glxwindow, __glXWindowRes, alias))
+	return BadAlloc;
+    if (!AddResource(req->window, __glXWindowLinkRes, alias))
+	return BadAlloc;
+
+    /* GLX 1.3 defines no window attributes: the list is ignored. */
+    return Success;
+}
+
+int DoDestroyGLXWindow(__GLXclientState *cl, XID glxwindow)
+{
+    ClientPtr client = cl->client;
+
+    if (client->req_len != (sz_xGLXDestroyWindowReq >> 2))
+	return BadLength;
+    if (!LookupIDByType(glxwindow, __glXWindowRes)) {
+	client->errorValue = glxwindow;
+	return __glXBadWindow;
+    }
+    FreeResourceByType(glxwindow, __glXWindowRes, FALSE);
+    return Success;
+}
+
+int __glXCreateWindow(__GLXclientState *cl, GLbyte *pc)
+{
+    return DoCreateGLXWindow(cl);
+}
+
+int __glXDestroyWindow(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXDestroyWindowReq *req = (xGLXDestroyWindowReq *) pc;
+    return DoDestroyGLXWindow(cl, req->glxwindow);
+}
+
+/*
+** glXGetDrawableAttributes: size and FBConfig of a window, GLXWindow or
+** GLXPixmap.  Pbuffers are not supported.
+*/
+int DoGetDrawableAttributes(__GLXclientState *cl, XID drawId)
+{
+    ClientPtr client = cl->client;
+    xGLXGetDrawableAttributesReply reply;
+    CARD32 attribs[8];
+    DrawablePtr pDraw;
+    __GLXpixmap *pGlxPixmap;
+    VisualID vid;
+    int i, rc, numAttribs = 4;
+
+    if (client->req_len != (sz_xGLXGetDrawableAttributesReq >> 2))
+	return BadLength;
+
+    rc = dixLookupDrawable(&pDraw, __glXResolveDrawableId(drawId), client, 0,
+			   DixUnknownAccess);
+    if (rc == Success && pDraw->type == DRAWABLE_WINDOW) {
+	vid = wVisual((WindowPtr) pDraw);
+    } else {
+	pGlxPixmap = (__GLXpixmap *) LookupIDByType(drawId, __glXPixmapRes);
+	if (!pGlxPixmap) {
+	    client->errorValue = drawId;
+	    return __glXBadDrawable;
+	}
+	pDraw = pGlxPixmap->pDraw;
+	vid = pGlxPixmap->modes->visualID;
+    }
+
+    attribs[0] = GLX_WIDTH;        attribs[1] = pDraw->width;
+    attribs[2] = GLX_HEIGHT;       attribs[3] = pDraw->height;
+    attribs[4] = GLX_FBCONFIG_ID;  attribs[5] = vid;
+    attribs[6] = GLX_EVENT_MASK;   attribs[7] = 0;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.type = X_Reply;
+    reply.sequenceNumber = client->sequence;
+    reply.length = numAttribs * 2;
+    reply.numAttribs = numAttribs;
+
+    if (client->swapped) {
+	__GLX_DECLARE_SWAP_VARIABLES;
+	__GLX_SWAP_SHORT(&reply.sequenceNumber);
+	__GLX_SWAP_INT(&reply.length);
+	__GLX_SWAP_INT(&reply.numAttribs);
+	for (i = 0; i < numAttribs * 2; i++)
+	    __GLX_SWAP_INT(&attribs[i]);
+    }
+    WriteToClient(client, sz_xGLXGetDrawableAttributesReply, (char *)&reply);
+    WriteToClient(client, numAttribs * 2 * __GLX_SIZE_CARD32, (char *)attribs);
+    return Success;
+}
+
+int __glXGetDrawableAttributes(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXGetDrawableAttributesReq *req = (xGLXGetDrawableAttributesReq *) pc;
+    return DoGetDrawableAttributes(cl, req->drawable);
+}
+
+/* glXQueryContext (GLX 1.3): like glXQueryContextInfoEXT plus FBConfig. */
+int DoQueryContext(__GLXclientState *cl, XID contextId)
+{
+    ClientPtr client = cl->client;
+    xGLXQueryContextReply reply;
+    __GLXcontext *ctx;
+    CARD32 props[10];
+    int i, nProps = 5;
+
+    if (client->req_len != (sz_xGLXQueryContextReq >> 2))
+	return BadLength;
+    ctx = (__GLXcontext *) LookupIDByType(contextId, __glXContextRes);
+    if (!ctx) {
+	client->errorValue = contextId;
+	return __glXBadContext;
+    }
+
+    props[0] = GLX_SHARE_CONTEXT_EXT;  props[1] = ctx->share_id;
+    props[2] = GLX_VISUAL_ID_EXT;      props[3] = ctx->pVisual->vid;
+    props[4] = GLX_SCREEN_EXT;         props[5] = ctx->pScreen->myNum;
+    props[6] = GLX_FBCONFIG_ID;        props[7] = ctx->modes->visualID;
+    props[8] = GLX_RENDER_TYPE;
+    props[9] = ctx->modes->rgbMode ? GLX_RGBA_TYPE : GLX_COLOR_INDEX_TYPE;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.type = X_Reply;
+    reply.sequenceNumber = client->sequence;
+    reply.length = nProps * 2;
+    reply.n = nProps;
+
+    if (client->swapped) {
+	__GLX_DECLARE_SWAP_VARIABLES;
+	__GLX_SWAP_SHORT(&reply.sequenceNumber);
+	__GLX_SWAP_INT(&reply.length);
+	__GLX_SWAP_INT(&reply.n);
+	for (i = 0; i < nProps * 2; i++)
+	    __GLX_SWAP_INT(&props[i]);
+    }
+    WriteToClient(client, sz_xGLXQueryContextReply, (char *)&reply);
+    WriteToClient(client, nProps * 2 * __GLX_SIZE_CARD32, (char *)props);
+    return Success;
+}
+
+int __glXQueryContext(__GLXclientState *cl, GLbyte *pc)
+{
+    xGLXQueryContextReq *req = (xGLXQueryContextReq *) pc;
+    return DoQueryContext(cl, req->context);
+}
 
 int __glXQueryContextInfoEXT(__GLXclientState *cl, GLbyte *pc)
 {
