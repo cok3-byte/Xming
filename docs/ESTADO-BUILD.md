@@ -29,8 +29,8 @@ de WSL, aquí 172.30.80.1):
    mantenerla abierta (por ejemplo con `sleep`).
 
 - Worktree: `D:\proyects\Xming-build`, rama `chore/build-reproducible` (desde `master`).
-- Único commit: `192a35e 🔧 Fuerza LF en la copia de trabajo e inicia CHANGELOG`.
-  **Todo lo demás está sin commitear** (el usuario pidió no commitear por ahora).
+- Todo está commiteado en esa rama, un commit por causa (`git log --oneline master..`),
+  sin push ni PR.
 - Toolchain: MSYS2 en `C:\msys64`, entorno MINGW32, gcc 16.2.0 i686, binutils 2.47.
   MSYS2 ya no publica `gdb` para i686.
 - Plan aparte de mejoras de XmingNotes y XLaunch: `D:\proyects\Xming\docs\plan-xmingnotes-xlaunch.md`
@@ -77,7 +77,7 @@ Técnica usada para depurar sin gdb: mini depurador Win32 en Python (ctypes, API
 + `Wow64GetThreadContext`) y compilar `hw/xwin`, `os`, `dix` con
 `CDEBUGFLAGS="-O0 -g -fno-omit-frame-pointer"` para seguir la cadena EBP con `addr2line`.
 
-## Correcciones hechas (sin commitear), para agrupar en commits por causa
+## Correcciones hechas (un commit por cada fila)
 
 | Causa | Ficheros |
 |---|---|
@@ -97,7 +97,7 @@ Técnica usada para depurar sin gdb: mini depurador Win32 en Python (ctypes, API
 
 ## Pendiente
 
-1. Commits por causa (ver tabla) cuando el usuario lo pida.
+1. ~~Commits por causa~~: hechos. Falta decidir push / PR / merge a `master`.
 2. Probar la CI (`.github/workflows/build.yml`, nunca ejecutada).
 3. ~~Prueba con clientes reales desde WSL~~: hecha (ver Resumen). En la prueba, `xterm` avisó
    de que no encuentra la fuente `-misc-fixed-…-iso10646-1` (solo hay `built-ins`).
