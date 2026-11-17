@@ -34,6 +34,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #ifdef __CYGWIN__
 #include <sys/select.h>
@@ -134,6 +135,19 @@ typedef struct _XMsgProcArgRec {
  */
 
 extern char *display;
+extern unsigned int g_uiAuthDataLen;
+extern char *g_pAuthData;
+
+/* Cookie interna (winauth.c) para conectar cuando el servidor usa -auth o XDMCP */
+static void
+winMultiWindowSetAuthorization (void)
+{
+#if defined(XCSECURITY)
+  if (g_pAuthData)
+    XSetAuthorization ("MIT-MAGIC-COOKIE-1", strlen ("MIT-MAGIC-COOKIE-1"),
+		       g_pAuthData, g_uiAuthDataLen);
+#endif
+}
 extern void ErrorF (const char* /*f*/, ...);
 
 
@@ -914,6 +928,8 @@ winMultiWindowXMsgProc (void *pArg)
   /* Initialize retry count */
   iRetries = 0;
 
+  winMultiWindowSetAuthorization ();
+
   /* Open the X display */
   do
     {
@@ -1243,6 +1259,8 @@ winInitMultiWindowWM (WMInfoPtr pWMInfo, WMProcArgPtr pProcArg)
   /* Print the display connection string */
   ErrorF ("winInitMultiWindowWM - DISPLAY=%s\n", pszDisplay);
   
+  winMultiWindowSetAuthorization ();
+
   /* Open the X display */
   do
     {

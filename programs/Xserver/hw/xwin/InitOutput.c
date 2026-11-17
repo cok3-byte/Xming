@@ -79,6 +79,7 @@ extern int			g_iLogVerbose;
 Bool				g_fLogInited;
 
 extern Bool			g_fXdmcpEnabled;
+extern Bool			g_fAuthEnabled;
 #ifdef HAS_DEVWINDOWS
 extern int			g_fdMessageQueue;
 #endif
@@ -1139,7 +1140,7 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
 
 #if defined(XCSECURITY)
   /* Generate a cookie used by internal clients for authorization */
-  if (g_fXdmcpEnabled)
+  if (g_fXdmcpEnabled || g_fAuthEnabled)
     winGenerateAuthorization ();
 #endif
 

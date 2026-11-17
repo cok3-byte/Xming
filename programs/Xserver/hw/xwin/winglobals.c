@@ -58,6 +58,8 @@ HWND		g_hDlgExit = NULL;
 HWND		g_hDlgAbout = NULL;
 const char *	g_pszQueryHost = NULL;
 Bool		g_fXdmcpEnabled = FALSE;
+/* Se usa -auth: los clientes internos (WM, clipboard) necesitan cookie propia */
+Bool		g_fAuthEnabled = FALSE;
 HICON		g_hIconX = NULL;
 HICON		g_hSmallIconX = NULL;
 #ifndef RELOCATE_PROJECTROOT
