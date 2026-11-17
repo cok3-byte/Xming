@@ -57,6 +57,7 @@ extern char *			g_pszLogFile;
 extern Bool			g_fLogFileChanged;
 #endif
 extern Bool			g_fXdmcpEnabled;
+extern Bool			g_fAuthEnabled;
 extern char *			g_pszCommandLine;
 extern Bool			g_fKeyboardHookLL;
 extern Bool			g_fNoHelpMessageBox;                     
@@ -79,7 +80,8 @@ struct GetMonitorInfoData {
     int  monitorWidth;
 };
 
-typedef wBOOL (*ENUMDISPLAYMONITORSPROC)(HDC,LPCRECT,MONITORENUMPROC,LPARAM);
+/* EnumDisplayMonitors es __stdcall: sin WINAPI la pila queda desbalanceada */
+typedef wBOOL (WINAPI *ENUMDISPLAYMONITORSPROC)(HDC,LPCRECT,MONITORENUMPROC,LPARAM);
 ENUMDISPLAYMONITORSPROC _EnumDisplayMonitors;
 
 wBOOL CALLBACK getMonitorInfo(HMONITOR hMonitor, HDC hdc, LPRECT rect, LPARAM _data);
@@ -1286,6 +1288,15 @@ ddxProcessArgument (int argc, char *argv[], int i)
     {
       CHECK_ARGS (1);
       g_cmdline.rgbPath = argv[++i];
+      return 0; /* Let DIX parse this again */
+    }
+
+  /*
+   * Look for the '-auth' argument
+   */
+  if (IS_OPTION ("-auth"))
+    {
+      g_fAuthEnabled = TRUE;
       return 0; /* Let DIX parse this again */
     }
 

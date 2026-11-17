@@ -48,7 +48,7 @@ SpecialCObjectRule(xkbpath,$(ICONFIGFILES),$(ROOT_DEFINES))
 
 #ifdef mingwArchitecture
 /* Build the Windows resource file (contains the program icon, etc.) */
-ResourceObjectRule(XKBConf,X.ico,$(RC_PROJECT_DEFINES))
+ResourceObjectRule(XKBConf,../Xserver/hw/xwin/X.ico,$(RC_PROJECT_DEFINES))
 #endif
 
 YaccFile(xkbparse,$(YFLAGS))

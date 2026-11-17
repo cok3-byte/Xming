@@ -31,6 +31,7 @@
 #ifdef HAVE_XWIN_CONFIG_H
 #include <xwin-config.h>
 #endif
+#include <stdint.h>
 #include "win.h"
 #include "dixevents.h"
 #include "winmultiwindowclass.h"

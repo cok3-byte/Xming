@@ -3,12 +3,29 @@
 #ifndef __XWIN_DDRAW_H
 #define __XWIN_DDRAW_H
 
+/* Xwindows.h define Status como int; las cabeceras RPC/COM lo usan como nombre */
+#pragma push_macro("Status")
+#undef Status
 #include <winnt.h>
 #include <wingdi.h>
 #include <objbase.h>
+#pragma pop_macro("Status")
 
-#if defined(NONAMELESSUNION) && !defined(DUMMYUNIONNAME1)
+/*
+ * El código usa uniones con nombre (ddsd.u1.lPitch). Con mingw-w64, _mingw.h ya
+ * fijó DUMMYUNIONNAMEn vacíos antes de que winms.h defina NONAMELESSUNION.
+ */
+#ifdef NONAMELESSUNION
+#undef DUMMYUNIONNAME1
+#undef DUMMYUNIONNAME2
+#undef DUMMYUNIONNAME3
+#undef DUMMYUNIONNAME4
+#undef DUMMYUNIONNAME5
 #define DUMMYUNIONNAME1 u1
+#define DUMMYUNIONNAME2 u2
+#define DUMMYUNIONNAME3 u3
+#define DUMMYUNIONNAME4 u4
+#define DUMMYUNIONNAME5 u5
 #endif
 
 #define ICOM_CALL_( xfn, p, args) (p)->lpVtbl->xfn args

@@ -53,7 +53,12 @@
 #if !defined(OPENSTEP) && (defined(__WIN32__) && !defined(__CYGWIN__))
 #  if (defined(_MSC_VER) || defined(__MINGW32__)) && defined(BUILD_GL32) /* tag specify we're building mesa as a DLL */
 #    define GLAPI __declspec(dllexport)
-#  elif (defined(_MSC_VER) || defined(__MINGW32__)) && defined(_DLL) /* tag specifying we're building for DLL runtime support */
+/*
+ * mingw-w64 define _DLL siempre (_mingw.h), aunque no se enlace contra una DLL
+ * de GL: con dllimport, las funciones GL >= 1.2 que aporta el servidor
+ * (GL/windows/glwrap.c) no enlazan. Solo MSVC y MinGW.org usan esta rama.
+ */
+#  elif (defined(_MSC_VER) || (defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR))) && defined(_DLL) /* tag specifying we're building for DLL runtime support */
 #    define GLAPI __declspec(dllimport)
 #  else /* for use with static link lib build of Win32 edition only */
 #    define GLAPI extern

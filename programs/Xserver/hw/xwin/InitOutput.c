@@ -47,8 +47,13 @@ from The Open Group.
 #include <xkbsrv.h>
 #endif
 #ifdef RELOCATE_PROJECTROOT
+/* xkbsrv.h define Status como int; las cabeceras COM lo usan como nombre */
+#pragma push_macro("Status")
+#undef Status
 #include <shlobj.h>
-typedef HRESULT (*SHGETFOLDERPATHPROC)(
+#pragma pop_macro("Status")
+/* SHGetFolderPathA es __stdcall: sin WINAPI la pila queda desbalanceada (crash con -O2) */
+typedef HRESULT (WINAPI *SHGETFOLDERPATHPROC)(
     HWND hwndOwner,
     int nFolder,
     HANDLE hToken,
@@ -74,6 +79,7 @@ extern int			g_iLogVerbose;
 Bool				g_fLogInited;
 
 extern Bool			g_fXdmcpEnabled;
+extern Bool			g_fAuthEnabled;
 #ifdef HAS_DEVWINDOWS
 extern int			g_fdMessageQueue;
 #endif
@@ -1134,7 +1140,7 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
 
 #if defined(XCSECURITY)
   /* Generate a cookie used by internal clients for authorization */
-  if (g_fXdmcpEnabled)
+  if (g_fXdmcpEnabled || g_fAuthEnabled)
     winGenerateAuthorization ();
 #endif
 

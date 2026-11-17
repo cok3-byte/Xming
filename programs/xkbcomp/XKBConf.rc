@@ -1,6 +1,6 @@
 #include <winver.h>
 
-#include "../../../version.def"
+#include "../../version.def"
 #define XW32_VERSIONINFO_NAME "xkbcomp\0"
 #define XW32_VERSIONINFO_COMMENT "XKB Compiler\0"
 
@@ -34,4 +34,4 @@ BEGIN
     END
 END
 
-xkbcomp_icon	ICON	DISCARDABLE	"X.ico"
+xkbcomp_icon	ICON	DISCARDABLE	"../Xserver/hw/xwin/X.ico"

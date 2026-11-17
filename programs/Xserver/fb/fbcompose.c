@@ -32,6 +32,7 @@
 #ifdef RENDER
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>

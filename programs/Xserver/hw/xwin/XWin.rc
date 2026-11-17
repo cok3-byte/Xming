@@ -38,7 +38,7 @@
 
 #include <winver.h>
 
-#include "../../../../../version.def"
+#include "../../../../version.def"
 #define XW32_VERSIONINFO_NAME "Xming\0"
 #define XW32_VERSIONINFO_COMMENT "Xming X Server\0"
 

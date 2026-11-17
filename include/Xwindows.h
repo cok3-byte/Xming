@@ -41,6 +41,17 @@ The Open Group.
 #endif
 
 #define BOOL wBOOL
+/* mingw-w64: no redefinir BOOL como int (choca con BOOL de Xmd.h) */
+#ifndef _NO_BOOL_TYPEDEF
+#define _NO_BOOL_TYPEDEF
+#define _X_DEFINED_NO_BOOL_TYPEDEF
+#endif
+/* mingw-w64 usa ControlMask como campo de estructura */
+#pragma push_macro("ControlMask")
+#undef ControlMask
+/* Ximint.h define Private como static; winnt.h/memoryapi.h lo usan como campo */
+#pragma push_macro("Private")
+#undef Private
 #define INT32 wINT32
 #undef Status
 #define Status wStatus
@@ -48,6 +59,17 @@ The Open Group.
 #define BYTE wBYTE
 #define FreeResource wFreeResource
 #include <windows.h>
+#pragma pop_macro("ControlMask")
+#pragma pop_macro("Private")
+#ifdef _X_DEFINED_NO_BOOL_TYPEDEF
+#undef _NO_BOOL_TYPEDEF
+#undef _X_DEFINED_NO_BOOL_TYPEDEF
+#endif
+/* Con _NO_BOOL_TYPEDEF mingw-w64 no crea wBOOL; el DDX lo usa en callbacks Win32 */
+#ifndef _X_WBOOL_DEFINED
+#define _X_WBOOL_DEFINED
+typedef int wBOOL;
+#endif
 #undef Status
 #define Status int
 #undef BYTE

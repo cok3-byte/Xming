@@ -8,6 +8,19 @@ https://sourceforge.net/projects/xming/files/Xming-source/
 You can download binaries from:
 https://sourceforge.net/projects/xming/files/Xming/6.9.0.31/
 
+Compilar en Windows (nativo, MSYS2 + mingw-w64, 32 bits)
+---------------------------------------------------------
+Desde PowerShell, en la raíz del repositorio:
+
+    .\winbuild\setup.ps1     # instala MSYS2 en C:\msys64 y los paquetes necesarios
+    .\winbuild\build.ps1     # build completo; binarios en dist\, log en winbuild\out\
+    .\winbuild\build.ps1 -Incremental   # recompila solo lo cambiado (tras un build completo)
+
+Por defecto usa todos los núcleos lógicos (make -j); limítalo con -Jobs N.
+Si MSYS2 está en otra ruta: -Msys2Root D:\msys64 (o la variable MSYS2_ROOT).
+La lista de paquetes está en winbuild\msys2-packages.txt y los ajustes de
+compilación para gcc moderno en config\cf\host.def.
+
                        README for X11R6.9 and X11R7.0
 
                             The X.Org Foundation

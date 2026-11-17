@@ -1,0 +1,59 @@
+/*
+ * host.def para el build nativo de Xming en Windows con MSYS2 (entorno MINGW32).
+ *
+ * mingw.cf se escribió para MinGW.org de 2005 compilado desde Cygwin o en cruzado
+ * desde Linux. Aquí se ajusta a gcc moderno de mingw-w64 ejecutado de forma nativa.
+ */
+
+/* mingw-w64 en vez de las rutas de Cygwin */
+#define ExtraIncDir		/mingw32/include
+#define LdCmd			gcc
+
+/*
+ * Código C de 2005 con gcc >= 10: estándar gnu89, símbolos comunes (variables
+ * globales definidas en cabeceras) y sin errores por declaraciones implícitas
+ * ni conversiones de punteros, que gcc 14 convierte en error por defecto.
+ */
+#define DefaultCCOptions	-std=gnu89 -fpermissive -fcommon -fno-strict-aliasing \
+				-Wno-implicit-function-declaration \
+				-Wno-implicit-int -Wno-int-conversion \
+				-Wno-incompatible-pointer-types \
+				-Wno-return-mismatch -Wno-pointer-sign
+
+#define OptimizedCDebugFlags	-O2
+
+/*
+ * winpthreads de mingw-w64 sustituye a pthreads-win32: no hace falta el
+ * -DPTW32_DLLPORT= de mingw.cf.
+ */
+#define HasPThreads		YES
+
+/* Usar las copias de expat/freetype/fontconfig del propio árbol (extras/),
+ * no las de MSYS2: el backend de fuentes del servidor depende de su API de 2005. */
+#define HasExpat		NO
+#define HasFreetype2		NO
+#define HasFontconfig		NO
+
+/* Solo lo necesario para ejecutar Xming */
+#define BuildServersOnly	YES
+#define BuildDocs		NO
+#define BuildFonts		NO
+#define BuildXprint		NO
+#define BuildXprintLib		NO
+#define XprtServer		NO
+#define XnestServer		NO
+#define XVirtualFramebufferServer NO
+#define XdmxServer		NO
+#define XWinServer		YES
+
+/*
+ * binutils >= 2.42 interpreta la "l" de "ar clq" como --libdeps y falla
+ * ("libdeps specified more than once").
+ */
+#define ArCmd			ArCmdBase cq
+
+/*
+ * pthreads-win32 (libpthreadGC2) no existe en mingw-w64: usar winpthreads,
+ * enlazado estático para no tener que distribuir libwinpthread-1.dll.
+ */
+#define XWinPThreadLib		-Wl,-Bstatic -lpthread -Wl,-Bdynamic

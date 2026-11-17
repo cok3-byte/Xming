@@ -1,0 +1,6 @@
+/*
+ * Versión que se incrusta en los recursos Win32 de Xming.exe y xkbcomp.exe
+ * (XWin.rc, XKBConf.rc). El build original de Xming lo tenía fuera del árbol.
+ */
+#define XW32_VERSION		6,9,0,31
+#define XW32_VERSION_STRING	"6.9.0.31"

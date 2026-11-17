@@ -509,6 +509,23 @@ init(void)
 {
 	register char	*p;
 
+#if defined(WIN32) && !defined(__CYGWIN__)
+	/*
+	 * Un imake nativo de Windows no puede abrir "/tmp" (lo resuelve como
+	 * \tmp de la unidad actual): usar %TEMP% o %TMP%.
+	 */
+	if ((p = getenv("TEMP")) != NULL || (p = getenv("TMP")) != NULL) {
+		size_t len = strlen(p) + sizeof("\\Imf.XXXXXX");
+		char *mf = malloc(len), *imf = malloc(len);
+		if (mf && imf) {
+			snprintf(mf, len, "%s\\Imf.XXXXXX", p);
+			snprintf(imf, len, "%s\\IIf.XXXXXX", p);
+			tmpMakefile = mf;
+			tmpImakefile = imf;
+		}
+	}
+#endif
+
 	make_argindex=0;
 	while (make_argv[ make_argindex ] != NULL)
 		make_argindex++;
@@ -2130,7 +2147,10 @@ KludgeOutputLine(char **pline)
 			goto breakfor;
 #if defined CROSSCOMPILE || defined INLINE_SYNTAX
 		    case '<':
-			if (inline_syntax) {
+#ifdef CROSSCOMPILE
+			if (inline_syntax)
+#endif
+			{
 			    if (p[1] == '<') /* inline file start */
 				InInline++;
 			}
