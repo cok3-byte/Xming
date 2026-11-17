@@ -22,7 +22,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Clipboard: textos grandes en ambos sentidos con el protocolo INCR de ICCCM. Antes, los
   textos grandes copiados desde aplicaciones GTK/Qt llegaban vacíos a Windows.
 - `winbuild/tests/cliptest.py`: pruebas del clipboard contra clientes X reales en WSL.
-
+- Multiwindow: títulos Unicode. Se lee `_NET_WM_NAME` (UTF-8, el que usan GTK y Qt) y las
+  ventanas son Unicode, así que acentos, símbolos y CJK ya no se pierden en el título ni en
+  la barra de tareas.
 ### Changed
 - El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
   XLaunch pasa `-noclipboard` cuando se desmarca la casilla.

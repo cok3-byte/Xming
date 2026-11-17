@@ -421,62 +421,57 @@ InitQueue (WMMsgQueuePtr pQueue)
 static void
 GetWindowName (Display *pDisplay, Window iWin, char **ppName)
 {
-  int			nResult, nNum;
+  static Display	*s_pDisplay = NULL;
+  static Atom		s_atmNetWmName, s_atmUtf8String;
+  Atom			atmType;
+  int			iFormat, nNum;
+  unsigned long		ulItems, ulLeft;
+  unsigned char		*pData = NULL;
   char			**ppList;
   XTextProperty		xtpName;
-  
-#if CYGMULTIWINDOW_DEBUG
-  ErrorF ("GetWindowName\n");
-#endif
 
   /* Intialize ppName to NULL */
   *ppName = NULL;
 
-  /* Try to get --- */
-  nResult = XGetWMName (pDisplay, iWin, &xtpName);
-  if (!nResult || !xtpName.value || !xtpName.nitems)
+  if (s_pDisplay != pDisplay)
     {
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - XGetWMName failed.  No name.\n");
-#endif
+      s_atmNetWmName = XInternAtom (pDisplay, "_NET_WM_NAME", False);
+      s_atmUtf8String = XInternAtom (pDisplay, "UTF8_STRING", False);
+      s_pDisplay = pDisplay;
+    }
+
+  /*
+   * Los clientes modernos (GTK, Qt) ponen el título en UTF-8 en _NET_WM_NAME
+   * y dejan en WM_NAME una versión degradada o vacía: tiene prioridad.
+   */
+  if (XGetWindowProperty (pDisplay, iWin, s_atmNetWmName, 0, 4096, False,
+			  s_atmUtf8String, &atmType, &iFormat, &ulItems,
+			  &ulLeft, &pData) == Success
+      && atmType == s_atmUtf8String && iFormat == 8 && ulItems > 0 && pData)
+    {
+      *ppName = malloc (ulItems + 1);
+      if (*ppName)
+	{
+	  memcpy (*ppName, pData, ulItems);
+	  (*ppName)[ulItems] = '\0';
+	}
+      XFree (pData);
       return;
     }
-  
-  /* */
-  if (xtpName.encoding == XA_STRING)
+  if (pData)
+    XFree (pData);
+
+  /* WM_NAME (STRING en Latin-1 o COMPOUND_TEXT): convertir a UTF-8 */
+  if (!XGetWMName (pDisplay, iWin, &xtpName) || !xtpName.value || !xtpName.nitems)
+    return;
+
+  if (Xutf8TextPropertyToTextList (pDisplay, &xtpName, &ppList, &nNum) >= Success
+      && nNum > 0 && *ppList)
     {
-      /* */
-      if (xtpName.value)
-	{
-	  int size = xtpName.nitems * (xtpName.format >> 3);
-	  *ppName = malloc(size + 1);
-	  strncpy(*ppName, xtpName.value, size);
-	  (*ppName)[size] = 0;
-	  XFree (xtpName.value);
-	}
-
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - XA_STRING %s\n", *ppName);
-#endif
+      *ppName = strdup (*ppList);
+      XFreeStringList (ppList);
     }
-  else
-    {
-      if (XmbTextPropertyToTextList (pDisplay, &xtpName, &ppList, &nNum) >= Success && nNum > 0 && *ppList)
-	{
-	  *ppName = strdup (*ppList);
-	  XFreeStringList (ppList);
-	}
-      XFree (xtpName.value);
-
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - %s %s\n",
-	      XGetAtomName (pDisplay, xtpName.encoding), *ppName);
-#endif
-    }
-
-#if CYGMULTIWINDOW_DEBUG
-  ErrorF ("GetWindowName - Returning\n");
-#endif
+  XFree (xtpName.value);
 }
 
 
@@ -553,7 +548,18 @@ UpdateName (WMInfoPtr pWMInfo, Window iWindow)
 			    &attr);
       if (!attr.override_redirect)
 	{
-	  SetWindowText (hWnd, pszName);
+	  /* El título está en UTF-8: pasarlo a UTF-16 para no perder caracteres */
+	  int iLen = MultiByteToWideChar (CP_UTF8, 0, pszName, -1, NULL, 0);
+	  wchar_t *pwszName = iLen > 0 ? malloc (iLen * sizeof (wchar_t)) : NULL;
+
+	  if (pwszName)
+	    {
+	      MultiByteToWideChar (CP_UTF8, 0, pszName, -1, pwszName, iLen);
+	      SetWindowTextW (hWnd, pwszName);
+	      free (pwszName);
+	    }
+	  else
+	    SetWindowTextA (hWnd, pszName);
 	  winUpdateIcon (iWindow);
 	}
 
@@ -848,6 +854,7 @@ winMultiWindowXMsgProc (void *pArg)
   int                   iRetries;
   XEvent		event;
   Atom                  atmWmName;
+  Atom                  atmNetWmName;
   Atom                  atmWmHints;
   Atom			atmWmChange;
   int			iReturn;
@@ -998,6 +1005,9 @@ winMultiWindowXMsgProc (void *pArg)
   atmWmName   = XInternAtom (pProcArg->pDisplay,
 			     "WM_NAME",
 			     False);
+  atmNetWmName = XInternAtom (pProcArg->pDisplay,
+			       "_NET_WM_NAME",
+			       False);
   atmWmHints   = XInternAtom (pProcArg->pDisplay,
 			      "WM_HINTS",
 			      False);
@@ -1056,7 +1066,8 @@ winMultiWindowXMsgProc (void *pArg)
 				  0);
 	}
       else if (event.type == PropertyNotify
-	       && event.xproperty.atom == atmWmName)
+	       && (event.xproperty.atom == atmWmName
+		   || event.xproperty.atom == atmNetWmName))
 	{
 	  memset (&msg, 0, sizeof (msg));
 

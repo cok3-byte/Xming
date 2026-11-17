@@ -1060,7 +1060,8 @@ winTopLevelWindowProc (HWND hwnd, UINT message,
       break;
     }
 
-  ret = DefWindowProc (hwnd, message, wParam, lParam);
+  /* La clase es Unicode (winmultiwindowwindow.c): usar la variante W */
+  ret = DefWindowProcW (hwnd, message, wParam, lParam);
   /*
    * If the window was minized we get the stack change before the window is restored
    * and so it gets lost. Ensure there stacking order is correct.

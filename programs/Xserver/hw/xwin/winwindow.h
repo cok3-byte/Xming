@@ -47,6 +47,11 @@
 #define WIN_SCR_PROP		"cyg_screen_prop rl"
 #define WINDOW_CLASS_X		PROJECT_NAME " X"
 #define WINDOW_TITLE_X		PROJECT_NAME " X"
+/* Versiones UTF-16 para la clase Unicode de las ventanas multiwindow */
+#define WIN_WIDEN2(s)		L ## s
+#define WIN_WIDEN(s)		WIN_WIDEN2(s)
+#define WINDOW_CLASS_XW		WIN_WIDEN(PROJECT_NAME) L" X"
+#define WINDOW_TITLE_XW		WIN_WIDEN(PROJECT_NAME) L" X"
 #define WIN_WINDOW_PROP		"cyg_window_prop_rl"
 #ifdef HAS_DEVWINDOWS
 # define WIN_MSG_QUEUE_FNAME	"/dev/windows"

@@ -85,7 +85,7 @@ winFindWindow (pointer value, XID id, pointer cdata);
 
 ATOM winInitMultiWindowClass(BOOL Reset){
   static ATOM           atomXWinClass=0;
-  WNDCLASSEX		wcx;
+  WNDCLASSEXW		wcx;
 
   if (atomXWinClass==0 || Reset) {
 
@@ -100,14 +100,18 @@ ATOM winInitMultiWindowClass(BOOL Reset){
     wcx.hCursor = 0;
     wcx.hbrBackground = (HBRUSH) GetStockObject (WHITE_BRUSH);
     wcx.lpszMenuName = NULL;
-    wcx.lpszClassName = WINDOW_CLASS_X;
+    /*
+     * Clase Unicode: con una clase ANSI, Windows convierte el título a la
+     * página de códigos y se pierden los caracteres que no caben en ella.
+     */
+    wcx.lpszClassName = WINDOW_CLASS_XW;
     wcx.hIconSm = g_hSmallIconX;
 
 #if CYGMULTIWINDOW_DEBUG
     ErrorF ("winCreateWindowsWindow - Creating class: %s\n", WINDOW_CLASS_X);
 #endif
 
-    atomXWinClass = RegisterClassEx (&wcx);
+    atomXWinClass = RegisterClassExW (&wcx);
   }
   return atomXWinClass;
 }
@@ -559,9 +563,9 @@ winCreateWindowsWindow (WindowPtr pWin)
   /* Create the window */
   /* Make it OVERLAPPED in create call since WS_POPUP doesn't support */
   /* CW_USEDEFAULT, change back to popup after creation */
-  hWnd = CreateWindowExA (WS_EX_TOOLWINDOW,	/* Extended styles */
-			  WINDOW_CLASS_X,	/* Class name */
-			  WINDOW_TITLE_X,	/* Window name */
+  hWnd = CreateWindowExW (WS_EX_TOOLWINDOW,	/* Extended styles */
+			  WINDOW_CLASS_XW,	/* Class name */
+			  WINDOW_TITLE_XW,	/* Window name */
 			  WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 			  iX,			/* Horizontal position */
 			  iY,			/* Vertical position */
@@ -573,7 +577,7 @@ winCreateWindowsWindow (WindowPtr pWin)
 			  pWin);		/* ScreenPrivates */
   if (hWnd == NULL)
     {
-      ErrorF ("winCreateWindowsWindow - CreateWindowExA () failed: %d\n",
+      ErrorF ("winCreateWindowsWindow - CreateWindowExW () failed: %d\n",
 	      (int) GetLastError ());
     }
   pWinPriv->hWnd = hWnd;
