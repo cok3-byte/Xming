@@ -30,7 +30,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   (`_NET_SUPPORTING_WM_CHECK`, `_NET_SUPPORTED`).
 - Rueda horizontal del ratón (botones X 6 y 7).
 - `winbuild/tests/desktest.py`: pruebas de integración con el escritorio desde WSL.
-
+- XLaunch se compila y se distribuye en `dist/` junto a Xming, con un `XLaunch.xsd` propio
+  (el de Xming 7.x no es redistribuible) que acepta atributos de versiones más nuevas.
 ### Changed
 - Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
   por el escalado de Windows, y el DPI por defecto es el del sistema en lugar de 75 (`-dpi`
@@ -52,6 +53,7 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Fixed
 - Un ratón del que Windows informa con 3 botones podía hacer leer a Xming fuera del mapa de
   botones al pulsar un botón lateral.
+
 - Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
   volver a anunciarlo mientras la aplicación que pegaba aún estaba copiando los datos. Los
   textos grandes (unos 2 MB o más) llegaban vacíos y el primer pegado tras arrancar fallaba

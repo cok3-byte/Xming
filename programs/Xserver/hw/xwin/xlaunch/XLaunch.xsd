@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Esquema de los ficheros de configuración de XLaunch (.xlaunch).
+
+  Escrito para este fork a partir de los atributos que lee y escribe config.cc;
+  no es el XLaunch.xsd de Xming 7.x. Se distribuye bajo la misma licencia MIT
+  que XLaunch (ver COPYING). Acepta atributos desconocidos para poder abrir
+  ficheros creados por versiones más nuevas de Xming.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.straightrunning.com/XmingNotes"
+           xmlns="http://www.straightrunning.com/XmingNotes"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="bool">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="True"/>
+      <xs:enumeration value="False"/>
+      <xs:enumeration value="true"/>
+      <xs:enumeration value="false"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="XLaunch">
+    <xs:complexType>
+      <xs:attribute name="WindowMode">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="MultiWindow"/>
+            <xs:enumeration value="Fullscreen"/>
+            <xs:enumeration value="Windowed"/>
+            <xs:enumeration value="Nodecoration"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="ClientMode">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="NoClient"/>
+            <xs:enumeration value="StartProgram"/>
+            <xs:enumeration value="XDMCP"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="ClientStart">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Local"/>
+            <xs:enumeration value="PuTTY"/>
+            <xs:enumeration value="OpenSSH"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="Display" type="xs:string"/>
+      <xs:attribute name="Program" type="xs:string"/>
+      <xs:attribute name="RemoteHost" type="xs:string"/>
+      <xs:attribute name="RemoteUser" type="xs:string"/>
+      <xs:attribute name="PathToProtocol" type="xs:string"/>
+      <xs:attribute name="Compress" type="bool"/>
+      <xs:attribute name="ExtraSSH" type="xs:string"/>
+      <xs:attribute name="PW" type="xs:string"/>
+      <xs:attribute name="PasswordStart" type="bool"/>
+      <xs:attribute name="XDMCPHost" type="xs:string"/>
+      <xs:attribute name="XDMCPBroadcast" type="bool"/>
+      <xs:attribute name="XDMCPIndirect" type="bool"/>
+      <xs:attribute name="Clipboard" type="bool"/>
+      <xs:attribute name="NoAccessControl" type="bool"/>
+      <xs:attribute name="FontServer" type="xs:string"/>
+      <xs:attribute name="ExtraParams" type="xs:string"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

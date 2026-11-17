@@ -717,6 +717,7 @@ class CMyWizard : public CWizard
 
                     }
 		case WM_NOTIFY:
+		  {
 		    LPNMHDR lpnm = (LPNMHDR) lParam;
 		    if (lpnm->code == PSN_SETACTIVE)
 		    {
@@ -752,6 +753,7 @@ class CMyWizard : public CWizard
 				break;
 			}
 		    }
+		  }
 		    break;
                 case WM_COMMAND:
                     // Handle control messages
@@ -838,7 +840,7 @@ class CMyWizard : public CWizard
 
 #ifdef _DEBUG
             // Debug only: Switch to Xming installation directory
-	    SetCurrentDirectory("C:\\Programme\\Xming");
+	    SetCurrentDirectory(L"C:\\Programme\\Xming");
 #endif	    
 
             // Build Xming commandline
@@ -912,7 +914,7 @@ class CMyWizard : public CWizard
 		    }
 		    else
 		    {
-			if (!GetEnvironmentVariable("SSH_AGENT_PID",0,0)) msdos = true;
+			if (!GetEnvironmentVariable(L"SSH_AGENT_PID",0,0)) msdos = true;
 			client += L"ssh -Y ";
 		    }
 		    if (config.compress)

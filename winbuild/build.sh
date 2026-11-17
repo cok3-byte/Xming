@@ -61,10 +61,17 @@ if [ ! -f "$XMING" ]; then
     exit 1
 fi
 
+# XLaunch (asistente de arranque) no está en el árbol imake: Makefile propio que
+# enlaza contra la libX11 de exports/lib.
+XLAUNCH_DIR="programs/Xserver/hw/xwin/xlaunch"
+rm -f "$XLAUNCH_DIR/XLaunch.exe"
+make -C "$XLAUNCH_DIR" -j"$JOBS"
+
 rm -rf "$DIST"
 mkdir -p "$DIST"
 cp "$XMING" "$DIST/"
 for f in programs/Xserver/hw/xwin/xlaunch/XLaunch.exe \
+         programs/Xserver/hw/xwin/xlaunch/XLaunch.xsd \
          programs/rgb/rgb.txt \
          programs/xkbcomp/xkbcomp.exe \
          exports/bin/libfreetype-6.dll \

@@ -27,8 +27,12 @@
  */
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
+#ifndef UNICODE
 #define UNICODE
+#endif
+#ifndef _UNICODE
 #define _UNICODE
+#endif
 
 #define PROG_NUMBER 10
 #define MAX_MESSAGE 256

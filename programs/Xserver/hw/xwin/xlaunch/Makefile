@@ -23,49 +23,50 @@
 # holders shall not be used in advertising or otherwise to promote the sale,
 # use or other dealings in this Software without prior written authorization.
 #
-WINDRES=/root/mingw/i686-pc-mingw32/bin/windres
+# Compilación nativa con MSYS2 (MINGW32): la invoca winbuild/build.sh después de
+# "make World", porque necesita la libX11 que deja en exports/lib.
 
-TARGET=mingw
-#DEBUG_FLAGS=-D_DEBUG
-CXX=/root/mingw/i686-pc-mingw32/bin/g++
+CXX = g++
+WINDRES = windres
 
-OS_FLAGS_mingw=-DWINVER=0x0501 -D_WIN32_IE=0x0500
-OS_FLAGS=$(OS_FLAGS_$(TARGET)) $(DEBUG_FLAGS)
+OS_FLAGS = -DUNICODE -D_UNICODE -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D_WIN32_IE=0x0800
+X11_DIR = ../../../../../exports
+X11_INCLUDE = -I$(X11_DIR)/include
+X11_LIBS = $(X11_DIR)/lib/libX11.a $(X11_DIR)/lib/libXau.a $(X11_DIR)/lib/libXdmcp.a -lws2_32
 
-X11_DIR_$(TARGET)=/usr/X11R6
-X11_DIR_mingw=../../../../../exports
-X11_DIR=$(X11_DIR_$(TARGET))
-X11_INCLUDE=-I$(X11_DIR)/include
-X11_LIBDIR=-L$(X11_DIR)/lib
-X11_LIBS_$(TARGET)=-lX11
-X11_LIBS_mingw=-lX11 -lws2_32
-X11_LIBS=$(X11_LIBS_$(TARGET))
+CXXFLAGS = -O2 -std=gnu++98 -fpermissive -Wno-write-strings $(OS_FLAGS) $(X11_INCLUDE)
+# Runtime de C++ y de gcc estáticos: así no hay que distribuir sus DLL.
+LDFLAGS = -mwindows -s -static -static-libgcc -static-libstdc++
+LIBS = -lhtmlhelp -lcomctl32 -lole32 -loleaut32 -luuid $(X11_LIBS)
 
-PROGRAMFILES:=/usr/local
+all: XLaunch.exe
 
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-CXXFLAGS=-Os -ffast-math $(OS_FLAGS) $(X11_INCLUDE)
-LDFLAGS=-mwindows -s $(X11_LIBDIR)
-LIBS=-lhtmlhelp -lbufferoverflowu -lcomctl32 -lole32 -loleaut32 $(X11_LIBS)
-all:XLaunch.exe
 %.res: %.rc
-	$(WINDRES) -O coff -o $@ $<
+	$(WINDRES) -I resources -O coff -o $@ $<
 
-WINDOW_PARTS=window util dialog wizard
-WINDOW_OBJECTS=$(foreach file,$(WINDOW_PARTS),window/$(file).o) 
+# X2.bmp (logotipo del diálogo) no venía en el código publicado; se generó una vez
+# desde ../X.ico con winbuild/ico2bmp.py y se versiona.
 
-RESOURCES_IMAGES=resources/multiwindow.bmp resources/fullscreen.bmp \
+WINDOW_PARTS = window util dialog wizard
+WINDOW_OBJECTS = $(foreach file,$(WINDOW_PARTS),window/$(file).o)
+
+RESOURCES_IMAGES = resources/multiwindow.bmp resources/fullscreen.bmp \
 	resources/windowed.bmp resources/nodecoration.bmp
 
 resources/resources.res: resources/resources.rc resources/resources.h \
 	resources/images.rc resources/dialog.rc resources/strings.rc resources/version.rc \
-	$(RESOURCES_IMAGES)
+	$(RESOURCES_IMAGES) X2.bmp
+
 XLaunch.exe: $(WINDOW_OBJECTS) main.o config.o file.o resources/resources.res
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+clean:
+	rm -f XLaunch.exe *.o window/*.o resources/*.res
 
 window/dialog.o: window/dialog.cc window/dialog.h window/window.h window/util.h
-window/frame.o: window/frame.cc window/frame.h window/window.h
 window/util.o: window/util.cc window/util.h
 window/window.o: window/window.cc window/window.h window/util.h
 window/wizard.o: window/wizard.cc window/wizard.h window/dialog.h \
