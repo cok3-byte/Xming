@@ -40,6 +40,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Fuentes bitmap en `dist/fonts/` (`misc`, `75dpi` y `100dpi`, unos 15 MB comprimidas), con
   `fonts.dir` y `fonts.alias`: `fixed` y las fuentes Unicode que usa xterm ya existen y las
   aplicaciones dejan de avisar de fuentes que faltan.
+- Fuentes del usuario: `%APPDATA%\Xming\fonts` y cada subcarpeta suya con `fonts.dir` se
+  añaden al font path al arrancar, sin permisos de administrador.
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
