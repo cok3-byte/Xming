@@ -32,6 +32,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `winbuild/tests/desktest.py`: pruebas de integración con el escritorio desde WSL.
 - XLaunch se compila y se distribuye en `dist/` junto a Xming, con un `XLaunch.xsd` propio
   (el de Xming 7.x no es redistribuible) que acepta atributos de versiones más nuevas.
+- XLaunch usa el OpenSSH integrado en Windows 10/11 sin pedir la ruta de `ssh.exe`.
+- XLaunch: con la casilla de compresión, OpenSSH recibe además `ServerAliveInterval=30` para
+  que las conexiones lentas no se corten por inactividad.
 ### Changed
 - Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
   por el escalado de Windows, y el DPI por defecto es el del sistema en lugar de 75 (`-dpi`
@@ -54,6 +57,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Un ratón del que Windows informa con 3 botones podía hacer leer a Xming fuera del mapa de
   botones al pulsar un botón lateral.
 
+### Security
+- XLaunch lanzaba `Xming`, `ssh` y `plink` por nombre, y Windows los busca también en el
+  directorio actual: un ejecutable con ese nombre dejado ahí se ejecutaba en su lugar. Ahora
+  usa rutas absolutas entre comillas.
 - XLaunch: los mensajes de error al cargar un `.xlaunch` podían desbordar un búfer con un
   nombre de fichero largo.
 - Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
