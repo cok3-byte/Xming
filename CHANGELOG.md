@@ -10,12 +10,16 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ## [Unreleased]
 
 ### Added
-- Build reproducible nativo en Windows con MSYS2 + mingw-w64 (`build/setup.ps1`,
-  `build/build.ps1`), sin depender de Cygwin ni de compilación cruzada desde Linux.
+- Build reproducible nativo en Windows con MSYS2 + mingw-w64 (`winbuild/setup.ps1`,
+  `winbuild/build.ps1`), sin depender de Cygwin ni de compilación cruzada desde Linux.
 
 ### Changed
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que
   imake y make funcionen en Windows.
+
+### Fixed
+- El bootstrap de imake no compilaba fuera de compilación cruzada y no podía usar `/tmp` en
+  Windows.
 
 ## [6.9.0.31] - 2007
 
