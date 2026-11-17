@@ -119,6 +119,8 @@ typedef struct _winWMMessageRec{
 #define		WM_WM_HINTS_EVENT	(WM_USER + 10)
 #define		WM_WM_CHANGE_STATE	(WM_USER + 11)
 #define		WM_WM_MAP2		(WM_USER + 12)
+/* _NET_WM_STATE: iX = acción (0 quitar, 1 añadir, 2 alternar), iY/iWidth = átomos */
+#define		WM_WM_NET_STATE		(WM_USER + 13)
 #define		WM_MANAGE		(WM_USER + 100)
 #define		WM_UNMANAGE		(WM_USER + 102)
 

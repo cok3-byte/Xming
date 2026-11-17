@@ -25,6 +25,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Multiwindow: títulos Unicode. Se lee `_NET_WM_NAME` (UTF-8, el que usan GTK y Qt) y las
   ventanas son Unicode, así que acentos, símbolos y CJK ya no se pierden en el título ni en
   la barra de tareas.
+- Multiwindow: `_NET_WM_STATE` de EWMH (maximizar, pantalla completa y siempre encima),
+  tanto pedido por el cliente como fijado antes de mostrarse. Xming se anuncia como WM EWMH
+  (`_NET_SUPPORTING_WM_CHECK`, `_NET_SUPPORTED`).
 - Rueda horizontal del ratón (botones X 6 y 7).
 ### Changed
 - Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
