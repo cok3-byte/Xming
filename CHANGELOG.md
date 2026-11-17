@@ -49,6 +49,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   renderizador por software de Microsoft ("GDI Generic").
 - `winbuild/tests/gltest.py`: pruebas de OpenGL indirecto con `glxinfo`, `glxgears` y una
   sonda de GLX 1.3 desde WSL.
+- README: cómo usar OpenGL y sus límites (OpenGL 1.x indirecto, sin OpenGL 3+).
+
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
