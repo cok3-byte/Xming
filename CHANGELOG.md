@@ -29,6 +29,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   tanto pedido por el cliente como fijado antes de mostrarse. Xming se anuncia como WM EWMH
   (`_NET_SUPPORTING_WM_CHECK`, `_NET_SUPPORTED`).
 - Rueda horizontal del ratón (botones X 6 y 7).
+- `winbuild/tests/desktest.py`: pruebas de integración con el escritorio desde WSL.
+
 ### Changed
 - Xming es *DPI-aware*: en pantallas al 125 % o 150 % las ventanas ya no se ven borrosas
   por el escalado de Windows, y el DPI por defecto es el del sistema en lugar de 75 (`-dpi`
