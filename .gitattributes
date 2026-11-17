@@ -1,0 +1,19 @@
+# El árbol X11R6.9 se compila con imake/make/sh de MSYS2, que no toleran CRLF.
+# Forzar LF en la copia de trabajo aunque core.autocrlf=true en Windows.
+* text=auto eol=lf
+
+# Ficheros que sí deben conservar CRLF en Windows
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binarios
+*.ico binary
+*.bmp binary
+*.png binary
+*.gif binary
+*.pcf binary
+*.pfa binary
+*.pfb binary
+*.ttf binary
+*.gz  binary

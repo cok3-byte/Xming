@@ -1,0 +1,20 @@
+# Salida del build imake/make
+*.o
+*.a
+*.obj
+*.exe
+*.dll
+*.res
+*.bak
+Makefile.bak
+xmakefile
+xmakefile.bak
+exports/
+config/imake/imake
+config/cf/date.def
+config/cf/version.def
+*.log
+
+# Paquete generado por build/build.ps1
+dist/
+build/out/
