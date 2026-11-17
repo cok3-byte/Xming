@@ -480,11 +480,18 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	else
 	  fConvertToUnicode = g_fUnicodeSupport && (CF_UNICODETEXT == wParam);
 
-	/* Request the selection contents */
+	/*
+	 * Request the selection contents. Para Unicode se pide UTF8_STRING,
+	 * que ofrecen casi todos los clientes modernos (muchos ya no ofrecen
+	 * COMPOUND_TEXT); si lo rechazan, winClipboardFlushXEvents recurre a
+	 * STRING. Sin Unicode se mantiene COMPOUND_TEXT -> UTF8_STRING.
+	 */
 	iReturn = XConvertSelection (pDisplay,
 				     g_atomLastOwnedSelection,
 				     XInternAtom (pDisplay,
-						  "COMPOUND_TEXT", False),
+						  fConvertToUnicode
+						  ? "UTF8_STRING"
+						  : "COMPOUND_TEXT", False),
 				     XInternAtom (pDisplay,
 						  "CYGX_CUT_BUFFER", False),
 				     iWindow,
