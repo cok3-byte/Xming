@@ -37,7 +37,6 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   que las conexiones lentas no se corten por inactividad.
 - `winbuild/tests/sshtest.py`: pruebas del backing store y de cómo lanza XLaunch a Xming y ssh.
 - README: cómo usar aplicaciones remotas por SSH, cuándo comprimir y cómo medir.
-
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
@@ -60,6 +59,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- El build con MSYS2 convertía las rutas Unix de los `-D` (por ejemplo `/usr/X11R6` pasaba a
+  `C:/msys64/usr/X11R6`), así que Xming no reubicaba a su carpeta ni las fuentes ni
+  `rgb.txt`: no encontraba ninguna fuente en disco ni los nombres de color.
 - Un ratón del que Windows informa con 3 botones podía hacer leer a Xming fuera del mapa de
   botones al pulsar un botón lateral.
 

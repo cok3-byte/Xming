@@ -19,6 +19,13 @@ if [ "${MSYSTEM:-}" != "MINGW32" ]; then
 fi
 
 echo "gcc: $(command -v gcc) ($(gcc -dumpmachine), $(gcc -dumpversion))"
+
+# MSYS2 convierte las rutas Unix de los argumentos de programas nativos: un
+# -DPROJECTROOT="/usr/X11R6" llegaba a gcc como "C:/msys64/usr/X11R6", mientras
+# que el font path por defecto (lista con comas) no se convertía. El prefijo dejaba
+# de coincidir y Xming no reubicaba las fuentes ni rgb.txt a su carpeta. Los -D son
+# cadenas para tiempo de ejecución: no deben convertirse nunca.
+export MSYS2_ARG_CONV_EXCL="-D"
 echo "modo: $MODE, trabajos paralelos: $JOBS"
 
 BOOT_CFLAGS="-std=gnu89 -fpermissive -fcommon"
