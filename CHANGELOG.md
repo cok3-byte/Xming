@@ -36,6 +36,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - XLaunch: con la casilla de compresión, OpenSSH recibe además `ServerAliveInterval=30` para
   que las conexiones lentas no se corten por inactividad.
 - `winbuild/tests/sshtest.py`: pruebas del backing store y de cómo lanza XLaunch a Xming y ssh.
+- README: cómo usar aplicaciones remotas por SSH, cuándo comprimir y cómo medir.
+
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
