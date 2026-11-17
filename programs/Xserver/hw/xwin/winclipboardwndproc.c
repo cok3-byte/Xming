@@ -51,6 +51,8 @@ extern void		CheckConnections();
  * References to external symbols
  */
 
+extern int		g_iClipboardTimeoutMs;
+extern Bool		g_fClipboardPrimary;
 extern Bool		g_fUseUnicode;
 extern Bool		g_fUnicodeSupport;
 extern void		*g_pClipboardDisplay;
@@ -64,23 +66,23 @@ extern HWND		g_hwndClipboard;
  * Local function prototypes
  */
 
-static Bool
+static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec);
+			  Bool fUseUnicode, int iTimeoutMs);
 
 
 /*
- * Process X events up to specified timeout
+ * Process X events up to specified timeout (in milliseconds)
  */
 
 static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec)
+			  Bool fUseUnicode, int iTimeoutMs)
 {
   int			iConnNumber;
   struct timeval	tv;
   int			iReturn;
-  DWORD			dwStopTime = (GetTickCount () / 1000) + iTimeoutSec;
+  DWORD			dwStart = GetTickCount ();
 
   /* We need to ensure that all pending events are processed */
   XSync (pDisplay, FALSE);
@@ -92,18 +94,32 @@ winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
   while (1)
     {
       fd_set		fdsRead;
+      DWORD		dwElapsed = GetTickCount () - dwStart;
+
+      /*
+       * XSync puede haber dejado eventos ya leídos en la cola de Xlib: select()
+       * no los vería y esperaríamos hasta el timeout. Procesarlos primero.
+       */
+      if (XPending (pDisplay))
+	{
+	  iReturn = winClipboardFlushXEvents (hwnd, iWindow, pDisplay,
+					      fUseUnicode);
+	  if (WIN_XEVENTS_NOTIFY == iReturn || WIN_XEVENTS_CONVERT == iReturn)
+	    return iReturn;
+	  continue;
+	}
+
+      /* Break out if no time left (la resta de DWORD tolera el desbordamiento) */
+      if (dwElapsed >= (DWORD) iTimeoutMs)
+	return WIN_XEVENTS_SUCCESS;
 
       /* Setup the file descriptor set */
       FD_ZERO (&fdsRead);
       FD_SET (iConnNumber, &fdsRead);
 
       /* Adjust timeout */
-      tv.tv_sec = dwStopTime - (GetTickCount () / 1000);
-      tv.tv_usec = 0;
-
-      /* Break out if no time left */
-      if (tv.tv_sec < 0)
-	return WIN_XEVENTS_SUCCESS;
+      tv.tv_sec = (iTimeoutMs - dwElapsed) / 1000;
+      tv.tv_usec = ((iTimeoutMs - dwElapsed) % 1000) * 1000;
 
       /* Wait for a Windows event or an X event */
       iReturn = select (iConnNumber + 1,/* Highest fds number */
@@ -385,20 +401,23 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	    return 0;
 	  }
 
-	/* Reassert ownership of PRIMARY */	  
-	iReturn = XSetSelectionOwner (pDisplay,
-				      XA_PRIMARY,
-				      iWindow,
-				      CurrentTime);
-	if (iReturn == BadAtom || iReturn == BadWindow)
+	/* Reassert ownership of PRIMARY (salvo con -noprimary) */
+	if (g_fClipboardPrimary)
 	  {
-	    winErrorFVerb (1, "winClipboardWindowProc - WM_DRAWCLIPBOARD - "
-		    "Could not reassert ownership of PRIMARY\n");
-	  }
-	else
-	  {
-	    winDebug ("winClipboardWindowProc - WM_DRAWCLIPBOARD - "
-		    "Reasserted ownership of PRIMARY\n");
+	    iReturn = XSetSelectionOwner (pDisplay,
+					  XA_PRIMARY,
+					  iWindow,
+					  CurrentTime);
+	    if (iReturn == BadAtom || iReturn == BadWindow)
+	      {
+		winErrorFVerb (1, "winClipboardWindowProc - WM_DRAWCLIPBOARD - "
+			"Could not reassert ownership of PRIMARY\n");
+	      }
+	    else
+	      {
+		winDebug ("winClipboardWindowProc - WM_DRAWCLIPBOARD - "
+			"Reasserted ownership of PRIMARY\n");
+	      }
 	  }
 	
 	/* Reassert ownership of the CLIPBOARD */	  
@@ -510,7 +529,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 					    iWindow,
 					    pDisplay,
 					    fConvertToUnicode,
-					    WIN_POLL_TIMEOUT);
+					    g_iClipboardTimeoutMs);
 	if (WIN_XEVENTS_CONVERT == iReturn)
 	  {
 	    /*
@@ -522,7 +541,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 						iWindow,
 						pDisplay,
 						fConvertToUnicode,
-						WIN_POLL_TIMEOUT);
+						g_iClipboardTimeoutMs);
 	  }
 	
 	/*

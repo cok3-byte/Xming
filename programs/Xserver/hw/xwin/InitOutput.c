@@ -803,7 +803,19 @@ winUseMsg (void)
 #ifdef XWIN_CLIPBOARD
   ErrorF ("\n-clipboard\n"
 	  "\tEnables the integration between the Xming clipboard and\n"
-	  "\tWindows clipboard.\n");
+	  "\tWindows clipboard (default).\n");
+  ErrorF ("-noclipboard\n"
+	  "\tDisables the clipboard integration.\n");
+  ErrorF ("-primary / -noprimary\n"
+	  "\tAlso sync (default) or ignore the X11 PRIMARY selection.\n"
+	  "\tWith -noprimary, selecting text in an X client does not\n"
+	  "\treplace the Windows clipboard.\n");
+  ErrorF ("-clipboardtimeout ms\n"
+	  "\tMaximum wait for an X client during a clipboard transfer\n"
+	  "\t(100-60000, default 1000).\n");
+  ErrorF ("-clipboardmaxsize MB\n"
+	  "\tLargest clipboard text accepted from X clients\n"
+	  "\t(1-1024, default 64).\n");
 #endif
   ErrorF ("-clipupdates num_boxes\n"
 	  "\tUse a clipping region to constrain shadow update blits to\n"

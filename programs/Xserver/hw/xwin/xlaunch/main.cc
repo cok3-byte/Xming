@@ -872,8 +872,10 @@ class CMyWizard : public CWizard
             buffer += L" ";
 		}
 	    }
-            if (config.clipboard)
-                buffer += L"-clipboard ";
+            // El clipboard está activo por defecto en el servidor: solo hay que
+            // indicarlo cuando el usuario lo desmarca.
+            if (!config.clipboard)
+                buffer += L"-noclipboard ";
 	    if (config.no_access_control)
 		buffer += L"-ac ";
             if (!config.font_server.empty())

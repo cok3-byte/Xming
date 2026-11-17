@@ -50,6 +50,9 @@ extern Bool			g_fInitializedDefaultScreens;
 #ifdef XWIN_CLIPBOARD
 extern Bool			g_fUnicodeClipboard;
 extern Bool			g_fClipboard;
+extern Bool			g_fClipboardPrimary;
+extern int			g_iClipboardTimeoutMs;
+extern unsigned long		g_ulClipboardMaxBytes;
 #endif
 extern int			g_iLogVerbose;
 extern char *			g_pszLogFile;
@@ -888,6 +891,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
 #ifdef XWIN_CLIPBOARD
   /*
    * Look for the '-clipboard' argument
+   * El clipboard ya está activo por defecto; se acepta por compatibilidad.
    */
   if (IS_OPTION ("-clipboard"))
     {
@@ -895,6 +899,67 @@ ddxProcessArgument (int argc, char *argv[], int i)
 
       /* Indicate that we have processed this argument */
       return 1;
+    }
+
+  /*
+   * Look for the '-noclipboard' argument
+   */
+  if (IS_OPTION ("-noclipboard"))
+    {
+      g_fClipboard = FALSE;
+      return 1;
+    }
+
+  /*
+   * Look for the '-primary' / '-noprimary' arguments
+   */
+  if (IS_OPTION ("-primary"))
+    {
+      g_fClipboardPrimary = TRUE;
+      return 1;
+    }
+  if (IS_OPTION ("-noprimary"))
+    {
+      g_fClipboardPrimary = FALSE;
+      return 1;
+    }
+
+  /*
+   * Look for the '-clipboardtimeout ms' argument
+   */
+  if (IS_OPTION ("-clipboardtimeout"))
+    {
+      int iTimeout;
+      CHECK_ARGS (1);
+      iTimeout = atoi (argv[++i]);
+      if (iTimeout < 100 || iTimeout > 60000)
+	{
+	  ErrorF ("ddxProcessArgument - -clipboardtimeout: valor fuera de rango "
+		  "(100-60000 ms): %s\n", argv[i]);
+	  UseMsg ();
+	  exit (1);
+	}
+      g_iClipboardTimeoutMs = iTimeout;
+      return 2;
+    }
+
+  /*
+   * Look for the '-clipboardmaxsize MB' argument
+   */
+  if (IS_OPTION ("-clipboardmaxsize"))
+    {
+      int iMB;
+      CHECK_ARGS (1);
+      iMB = atoi (argv[++i]);
+      if (iMB < 1 || iMB > 1024)
+	{
+	  ErrorF ("ddxProcessArgument - -clipboardmaxsize: valor fuera de rango "
+		  "(1-1024 MB): %s\n", argv[i]);
+	  UseMsg ();
+	  exit (1);
+	}
+      g_ulClipboardMaxBytes = (unsigned long) iMB * 1024 * 1024;
+      return 2;
     }
 #endif
 

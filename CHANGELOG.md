@@ -16,7 +16,12 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `dist/` listo para ejecutar: `Xming.exe`, `xkbcomp.exe`, `libfreetype-6.dll`, datos XKB,
   base de locales de Xlib, `rgb.txt`, `XErrorDB` y `XKeysymDB`.
 - Workflow de GitHub Actions que compila en `windows-latest` y publica `dist/` como artefacto.
+- Clipboard: `-noclipboard` para desactivarlo, `-noprimary` / `-primary` para decidir si la
+  selección PRIMARY (texto seleccionado en un cliente X) también sustituye al portapapeles de
+  Windows, `-clipboardtimeout ms` y `-clipboardmaxsize MB`.
 ### Changed
+- El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
+  XLaunch pasa `-noclipboard` cuando se desmarca la casilla.
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que
   imake y make funcionen en Windows.
 - El código se adapta a gcc 16 y a las cabeceras de mingw-w64 (choques de nombres entre
@@ -25,6 +30,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Fixed
 - `winbuild/build.sh` daba por bueno un build en el que no se había podido compilar el
   servidor (con `make -k` quedaba el `Xming.exe` anterior); ahora lo borra antes de compilar.
+- Clipboard: la espera de un pegado podía agotar el timeout aunque la respuesta ya
+  estuviera recibida en la cola de Xlib.
 - Crash al arrancar con optimización: los callbacks de XACE recibían punteros a datos de un
   bloque que ya había terminado (`Xext/xace.c`). El compilador de 2005 lo toleraba por azar.
 - Crash al arrancar con optimización: `SHGetFolderPathA` y `EnumDisplayMonitors` se llamaban
