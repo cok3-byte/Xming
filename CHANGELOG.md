@@ -20,6 +20,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- Las funciones OpenGL ≥ 1.2 del servidor no enlazaban con mingw-w64 (`gl.h` las declaraba
+  `dllimport`).
 - El bootstrap de imake no compilaba fuera de compilación cruzada y no podía usar `/tmp` en
   Windows.
 
