@@ -42,6 +42,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   aplicaciones dejan de avisar de fuentes que faltan.
 - Fuentes del usuario: `%APPDATA%\Xming\fonts` y cada subcarpeta suya con `fonts.dir` se
   añaden al font path al arrancar, sin permisos de administrador.
+- `winbuild/tests/fonttest.py`: pruebas de fuentes contra clientes X reales en WSL.
+
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
