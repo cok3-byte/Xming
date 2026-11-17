@@ -66,6 +66,7 @@ extern Bool		g_fXdmcpEnabled;
 extern Bool		g_fClipboardLaunched;
 extern Bool		g_fClipboardStarted;
 extern Bool		g_fClipboard;
+extern Bool		g_fClipboardPrimary;
 extern Window		g_iClipboardWindow;
 extern Atom		g_atomLastOwnedSelection;
 extern HWND		g_hwndClipboard;
@@ -352,6 +353,10 @@ winProcSetSelectionOwner (ClientPtr client)
     }
 
   /* Now we either have a valid window or None */
+
+  /* Con -noprimary, PRIMARY no toca el portapapeles de Windows */
+  if (XA_PRIMARY == stuff->selection && !g_fClipboardPrimary)
+    goto winProcSetSelectionOwner_Done;
 
   /* Save selection owners for monitored selections, ignore other selections */
   if (XA_PRIMARY == stuff->selection)

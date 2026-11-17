@@ -113,6 +113,13 @@ winClipboardUNIXtoDOS (unsigned char **ppszData, int iLength)
 
   /* Allocate a new string */
   pszDestBegin = pszDest = malloc (iLength + iNewlineCount + 1);
+  if (pszDestBegin == NULL)
+    {
+      /* Sin memoria: dejar el texto con finales de línea Unix */
+      ErrorF ("winClipboardUNIXtoDOS - malloc failed for %d bytes\n",
+	      iLength + iNewlineCount + 1);
+      return;
+    }
 
   /* Set source pointer to beginning of data string */
   pszSrc = *ppszData;

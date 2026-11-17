@@ -16,14 +16,40 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `dist/` listo para ejecutar: `Xming.exe`, `xkbcomp.exe`, `libfreetype-6.dll`, datos XKB,
   base de locales de Xlib, `rgb.txt`, `XErrorDB` y `XKeysymDB`.
 - Workflow de GitHub Actions que compila en `windows-latest` y publica `dist/` como artefacto.
+- Clipboard: `-noclipboard` para desactivarlo, `-noprimary` / `-primary` para decidir si la
+  selección PRIMARY (texto seleccionado en un cliente X) también sustituye al portapapeles de
+  Windows, `-clipboardtimeout ms` y `-clipboardmaxsize MB`.
+- Clipboard: textos grandes en ambos sentidos con el protocolo INCR de ICCCM. Antes, los
+  textos grandes copiados desde aplicaciones GTK/Qt llegaban vacíos a Windows.
+- `winbuild/tests/cliptest.py`: pruebas del clipboard contra clientes X reales en WSL.
 
 ### Changed
+- El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
+  XLaunch pasa `-noclipboard` cuando se desmarca la casilla.
+- El clipboard usa `AddClipboardFormatListener` (Vista o posterior) en lugar de la cadena de
+  visores de Windows, que se rompía cuando otra aplicación no reenviaba los mensajes (por
+  ejemplo, Escritorio remoto). En sistemas sin esa API se mantiene la cadena.
+- Al pegar en Windows desde X se pide primero `UTF8_STRING`, que ofrecen casi todos los
+  clientes modernos, en lugar de `COMPOUND_TEXT`.
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que
   imake y make funcionen en Windows.
 - El código se adapta a gcc 16 y a las cabeceras de mingw-w64 (choques de nombres entre
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
+  volver a anunciarlo mientras la aplicación que pegaba aún estaba copiando los datos. Los
+  textos grandes (unos 2 MB o más) llegaban vacíos y el primer pegado tras arrancar fallaba
+  a veces. Ahora espera a que el portapapeles quede libre.
+- `winbuild/build.sh` daba por bueno un build en el que no se había podido compilar el
+  servidor (con `make -k` quedaba el `Xming.exe` anterior); ahora lo borra antes de compilar.
+- Clipboard: cada conversión X→Windows se daba por fallida aunque funcionara, porque
+  `XConvertSelection` devuelve 1 y no `Success`; el pegado dependía de que la respuesta
+  llegara a tiempo por casualidad.
+- Clipboard: se perdía una copia completa del texto en cada pegado X→Windows (fuga de
+  memoria) y faltaban comprobaciones de memoria al convertir textos.
+- Clipboard: la espera de un pegado podía agotar el timeout aunque la respuesta ya
+  estuviera recibida en la cola de Xlib.
 - Crash al arrancar con optimización: los callbacks de XACE recibían punteros a datos de un
   bloque que ya había terminado (`Xext/xace.c`). El compilador de 2005 lo toleraba por azar.
 - Crash al arrancar con optimización: `SHGetFolderPathA` y `EnumDisplayMonitors` se llamaban

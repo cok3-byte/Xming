@@ -27,6 +27,11 @@ BOOT_CFLAGS="-std=gnu89 -fpermissive -fcommon"
 # -O agrupa la salida de cada objeto para que el log siga siendo legible en paralelo.
 PAR="-k -j$JOBS -Otarget"
 
+# Con -k, un fallo de compilación no detiene make y quedaría el Xming.exe anterior:
+# borrarlo garantiza que dist/ solo reciba un binario enlazado en este build.
+XMING="programs/Xserver/Xming.exe"
+rm -f "$XMING"
+
 case "$MODE" in
     world)
         # Los pasos previos de World (bootstrap, Makefiles, depend) son secuenciales;
@@ -51,7 +56,6 @@ case "$MODE" in
         ;;
 esac
 
-XMING="programs/Xserver/Xming.exe"
 if [ ! -f "$XMING" ]; then
     echo "No se generó $XMING: revisa el log de build." >&2
     exit 1

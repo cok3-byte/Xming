@@ -82,8 +82,29 @@ manual page, \fIXWin\fP accepts the following command line switches,
 .TP 8
 .B \-clipboard
 Enables the integration
-between the Cygwin/X clipboard and Windows clipboard.  Do not use in
+between the X clipboard and Windows clipboard.  This is the default; the
+option is accepted for compatibility.  Do not use in
 conjunction with the \fIxwinclip\fP program.
+.TP 8
+.B \-noclipboard
+Disables the clipboard integration.
+.TP 8
+.B \-primary
+Also synchronize the X11 PRIMARY selection with the Windows clipboard
+(default).
+.TP 8
+.B \-noprimary
+Ignore the PRIMARY selection: only the CLIPBOARD selection is
+synchronized, so selecting text in an X client does not replace the
+Windows clipboard.
+.TP 8
+.B "\-clipboardtimeout \fIms\fP"
+Maximum time, in milliseconds, to wait for an X client while converting
+clipboard data (100\-60000, default 1000).
+.TP 8
+.B "\-clipboardmaxsize \fIMB\fP"
+Largest clipboard text accepted from X clients, in megabytes
+(1\-1024, default 64).  Larger transfers are discarded.
 .TP 8
 .B "\-clipupdates \fInum_boxes\fP"
 Specify an optional threshold, above which the boxes in a shadow

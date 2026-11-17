@@ -51,6 +51,7 @@
  */
 
 extern Bool		g_fUnicodeClipboard;
+extern Bool		g_fClipboardPrimary;
 extern unsigned long	serverGeneration;
 #if defined(XCSECURITY)
 extern unsigned int	g_uiAuthDataLen;
@@ -270,13 +271,16 @@ winClipboardProc (void *pvNotUsed)
   /* Assert ownership of selections if Win32 clipboard is owned */
   if (NULL != GetClipboardOwner ())
     {
-      /* PRIMARY */
-      iReturn = XSetSelectionOwner (pDisplay, XA_PRIMARY,
-				    iWindow, CurrentTime);
-      if (iReturn == BadAtom || iReturn == BadWindow)
+      /* PRIMARY (salvo con -noprimary) */
+      if (g_fClipboardPrimary)
 	{
-	  ErrorF ("winClipboardProc - Could not set PRIMARY owner\n");
-	  pthread_exit (NULL);
+	  iReturn = XSetSelectionOwner (pDisplay, XA_PRIMARY,
+					iWindow, CurrentTime);
+	  if (iReturn == BadAtom || iReturn == BadWindow)
+	    {
+	      ErrorF ("winClipboardProc - Could not set PRIMARY owner\n");
+	      pthread_exit (NULL);
+	    }
 	}
 
       /* CLIPBOARD */

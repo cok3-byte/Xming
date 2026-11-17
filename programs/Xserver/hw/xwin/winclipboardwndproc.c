@@ -44,13 +44,46 @@ extern void		CheckConnections();
  */
 
 #define WIN_CLIPBOARD_PROP	"cyg_clipboard_prop"
-#define WIN_POLL_TIMEOUT	1
+
+/* WINVER=0x0501 oculta estas definiciones de Vista en winuser.h */
+#ifndef WM_CLIPBOARDUPDATE
+#define WM_CLIPBOARDUPDATE	0x031D
+#endif
+
+/*
+ * AddClipboardFormatListener (Vista+) sustituye a la cadena de visores
+ * (SetClipboardViewer), que se rompe si otra aplicación no reenvía los
+ * mensajes. Se resuelve en tiempo de ejecución para seguir funcionando en XP.
+ */
+typedef BOOL (WINAPI *CLIPBOARDLISTENERPROC) (HWND);
+static CLIPBOARDLISTENERPROC	s_pfnAddClipboardFormatListener;
+static CLIPBOARDLISTENERPROC	s_pfnRemoveClipboardFormatListener;
+static Bool			s_fClipboardListener = FALSE;
+
+static Bool
+winClipboardAddListener (HWND hwnd)
+{
+  HMODULE hUser32 = GetModuleHandle ("user32.dll");
+
+  if (hUser32 == NULL)
+    return FALSE;
+  s_pfnAddClipboardFormatListener = (CLIPBOARDLISTENERPROC)
+    GetProcAddress (hUser32, "AddClipboardFormatListener");
+  s_pfnRemoveClipboardFormatListener = (CLIPBOARDLISTENERPROC)
+    GetProcAddress (hUser32, "RemoveClipboardFormatListener");
+  if (s_pfnAddClipboardFormatListener == NULL
+      || s_pfnRemoveClipboardFormatListener == NULL)
+    return FALSE;
+  return (*s_pfnAddClipboardFormatListener) (hwnd) ? TRUE : FALSE;
+}
 
 
 /*
  * References to external symbols
  */
 
+extern int		g_iClipboardTimeoutMs;
+extern Bool		g_fClipboardPrimary;
 extern Bool		g_fUseUnicode;
 extern Bool		g_fUnicodeSupport;
 extern void		*g_pClipboardDisplay;
@@ -64,23 +97,23 @@ extern HWND		g_hwndClipboard;
  * Local function prototypes
  */
 
-static Bool
+static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec);
+			  Bool fUseUnicode, int iTimeoutMs);
 
 
 /*
- * Process X events up to specified timeout
+ * Process X events up to specified timeout (in milliseconds)
  */
 
 static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec)
+			  Bool fUseUnicode, int iTimeoutMs)
 {
   int			iConnNumber;
   struct timeval	tv;
   int			iReturn;
-  DWORD			dwStopTime = (GetTickCount () / 1000) + iTimeoutSec;
+  DWORD			dwStart = GetTickCount ();
 
   /* We need to ensure that all pending events are processed */
   XSync (pDisplay, FALSE);
@@ -92,18 +125,32 @@ winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
   while (1)
     {
       fd_set		fdsRead;
+      DWORD		dwElapsed = GetTickCount () - dwStart;
+
+      /*
+       * XSync puede haber dejado eventos ya leídos en la cola de Xlib: select()
+       * no los vería y esperaríamos hasta el timeout. Procesarlos primero.
+       */
+      if (XPending (pDisplay))
+	{
+	  iReturn = winClipboardFlushXEvents (hwnd, iWindow, pDisplay,
+					      fUseUnicode);
+	  if (WIN_XEVENTS_NOTIFY == iReturn || WIN_XEVENTS_CONVERT == iReturn)
+	    return iReturn;
+	  continue;
+	}
+
+      /* Break out if no time left (la resta de DWORD tolera el desbordamiento) */
+      if (dwElapsed >= (DWORD) iTimeoutMs)
+	return WIN_XEVENTS_SUCCESS;
 
       /* Setup the file descriptor set */
       FD_ZERO (&fdsRead);
       FD_SET (iConnNumber, &fdsRead);
 
       /* Adjust timeout */
-      tv.tv_sec = dwStopTime - (GetTickCount () / 1000);
-      tv.tv_usec = 0;
-
-      /* Break out if no time left */
-      if (tv.tv_sec < 0)
-	return WIN_XEVENTS_SUCCESS;
+      tv.tv_sec = (iTimeoutMs - dwElapsed) / 1000;
+      tv.tv_usec = ((iTimeoutMs - dwElapsed) % 1000) * 1000;
 
       /* Wait for a Windows event or an X event */
       iReturn = select (iConnNumber + 1,/* Highest fds number */
@@ -156,6 +203,10 @@ winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
  */
 #define WM_USER_PASTE_COMPLETE		(WM_USER + 1003)
 
+/* Reintento de WM_USER_PASTE_COMPLETE mientras otro proceso tiene el portapapeles */
+#define WIN_PASTE_COMPLETE_TIMER_ID	1
+#define WIN_PASTE_COMPLETE_RETRY_MS	50
+
 LRESULT CALLBACK
 winClipboardWindowProc (HWND hwnd, UINT message, 
 			WPARAM wParam, LPARAM lParam)
@@ -170,9 +221,17 @@ winClipboardWindowProc (HWND hwnd, UINT message,
       {
 	winDebug ("winClipboardWindowProc - WM_DESTROY\n");
 
-	/* Remove ourselves from the clipboard chain */
-	ChangeClipboardChain (hwnd, s_hwndNextViewer);
-	
+	if (s_fClipboardListener)
+	  {
+	    (*s_pfnRemoveClipboardFormatListener) (hwnd);
+	    s_fClipboardListener = FALSE;
+	  }
+	else
+	  {
+	    /* Remove ourselves from the clipboard chain */
+	    ChangeClipboardChain (hwnd, s_hwndNextViewer);
+	  }
+
 	s_hwndNextViewer = NULL;
 
 	PostQuitMessage (0);
@@ -185,7 +244,21 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	HWND first, next;
 	DWORD error_code = 0;
 	winDebug ("winClipboardWindowProc - WM_CREATE\n");
-	
+
+	/* Preferir el listener del sistema (Vista+) a la cadena de visores */
+	if (winClipboardAddListener (hwnd))
+	  {
+	    s_fClipboardListener = TRUE;
+	    /*
+	     * El listener no envía un aviso inicial como SetClipboardViewer,
+	     * así que no hay primer mensaje que ignorar.
+	     */
+	    s_fCBCInitialized = TRUE;
+	    winErrorFVerb (1, "winClipboardWindowProc - WM_CREATE - "
+			   "using AddClipboardFormatListener\n");
+	    return 0;
+	  }
+
 	first = GetClipboardViewer();			/* Get handle to first viewer in chain. */
 	if (first == hwnd) return 0;			/* Make sure it's not us! */
 	/* Add ourselves to the clipboard viewer chain */
@@ -242,6 +315,10 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	DWORD error_code = 0;
 	winDebug ("winClipboardWindowProc - WM_WM_REINIT: Enter\n");
 
+	/* Con el listener del sistema no hay cadena que reparar */
+	if (s_fClipboardListener)
+	  return 0;
+
 	first = GetClipboardViewer();			/* Get handle to first viewer in chain. */
 	if (first == hwnd) return 0;			/* Make sure it's not us! */
 	winDebug ("  WM_WM_REINIT: Replacing us(%x) with %x at head "
@@ -264,6 +341,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
       return 0;
 
 
+    case WM_CLIPBOARDUPDATE:	/* listener del sistema: misma lógica, sin cadena */
     case WM_DRAWCLIPBOARD:
       {
 	static Bool s_fProcessingDrawClipboard = FALSE;
@@ -280,6 +358,11 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	if (! s_fProcessingDrawClipboard) 
 	  {
 	    s_fProcessingDrawClipboard = TRUE;
+	  }
+	else if (s_fClipboardListener)
+	  {
+	    /* Sin cadena no hay bucle que romper: ignorar la llamada anidada */
+	    return 0;
 	  }
 	else
 	  {
@@ -385,20 +468,23 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	    return 0;
 	  }
 
-	/* Reassert ownership of PRIMARY */	  
-	iReturn = XSetSelectionOwner (pDisplay,
-				      XA_PRIMARY,
-				      iWindow,
-				      CurrentTime);
-	if (iReturn == BadAtom || iReturn == BadWindow)
+	/* Reassert ownership of PRIMARY (salvo con -noprimary) */
+	if (g_fClipboardPrimary)
 	  {
-	    winErrorFVerb (1, "winClipboardWindowProc - WM_DRAWCLIPBOARD - "
-		    "Could not reassert ownership of PRIMARY\n");
-	  }
-	else
-	  {
-	    winDebug ("winClipboardWindowProc - WM_DRAWCLIPBOARD - "
-		    "Reasserted ownership of PRIMARY\n");
+	    iReturn = XSetSelectionOwner (pDisplay,
+					  XA_PRIMARY,
+					  iWindow,
+					  CurrentTime);
+	    if (iReturn == BadAtom || iReturn == BadWindow)
+	      {
+		winErrorFVerb (1, "winClipboardWindowProc - WM_DRAWCLIPBOARD - "
+			"Could not reassert ownership of PRIMARY\n");
+	      }
+	    else
+	      {
+		winDebug ("winClipboardWindowProc - WM_DRAWCLIPBOARD - "
+			"Reasserted ownership of PRIMARY\n");
+	      }
 	  }
 	
 	/* Reassert ownership of the CLIPBOARD */	  
@@ -461,11 +547,18 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	else
 	  fConvertToUnicode = g_fUnicodeSupport && (CF_UNICODETEXT == wParam);
 
-	/* Request the selection contents */
+	/*
+	 * Request the selection contents. Para Unicode se pide UTF8_STRING,
+	 * que ofrecen casi todos los clientes modernos (muchos ya no ofrecen
+	 * COMPOUND_TEXT); si lo rechazan, winClipboardFlushXEvents recurre a
+	 * STRING. Sin Unicode se mantiene COMPOUND_TEXT -> UTF8_STRING.
+	 */
 	iReturn = XConvertSelection (pDisplay,
 				     g_atomLastOwnedSelection,
 				     XInternAtom (pDisplay,
-						  "COMPOUND_TEXT", False),
+						  fConvertToUnicode
+						  ? "UTF8_STRING"
+						  : "COMPOUND_TEXT", False),
 				     XInternAtom (pDisplay,
 						  "CYGX_CUT_BUFFER", False),
 				     iWindow,
@@ -510,7 +603,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 					    iWindow,
 					    pDisplay,
 					    fConvertToUnicode,
-					    WIN_POLL_TIMEOUT);
+					    g_iClipboardTimeoutMs);
 	if (WIN_XEVENTS_CONVERT == iReturn)
 	  {
 	    /*
@@ -522,7 +615,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 						iWindow,
 						pDisplay,
 						fConvertToUnicode,
-						WIN_POLL_TIMEOUT);
+						g_iClipboardTimeoutMs);
 	  }
 	
 	/*
@@ -578,8 +671,21 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	  return 0;
 	winDebug ("winClipboardWindowProc - WM_USER_PASTE_COMPLETE\n");
 
-	/* Set up for another delayed rendering callback */
-	OpenClipboard (g_hwndClipboard);
+	/*
+	 * Set up for another delayed rendering callback.
+	 *
+	 * Mientras la aplicación que pegó tenga el portapapeles abierto, sigue
+	 * copiando los datos que acabamos de entregar: vaciarlo ahora (como hacía
+	 * el original sin comprobar OpenClipboard) los sustituía por NULL antes de
+	 * que terminara. Con textos grandes el pegado llegaba vacío, y también
+	 * fallaba a veces el primer pegado. Reintentar cuando se libere.
+	 */
+	if (!OpenClipboard (g_hwndClipboard))
+	  {
+	    SetTimer (hwnd, WIN_PASTE_COMPLETE_TIMER_ID,
+		      WIN_PASTE_COMPLETE_RETRY_MS, NULL);
+	    return 0;
+	  }
 
 	/* Take ownership of the Windows clipboard */
 	EmptyClipboard ();
@@ -595,6 +701,15 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	CloseClipboard ();
       }
       return 0;
+
+    case WM_TIMER:
+      if (wParam == WIN_PASTE_COMPLETE_TIMER_ID)
+	{
+	  KillTimer (hwnd, WIN_PASTE_COMPLETE_TIMER_ID);
+	  PostMessage (hwnd, WM_USER_PASTE_COMPLETE, 0, 0);
+	  return 0;
+	}
+      break;
     }
 
   /* Let Windows perform default processing for unhandled messages */

@@ -109,7 +109,14 @@ winDispatchProcPtr	winProcSetSelectionOwnerOrig = NULL;
  */
 
 Bool			g_fUnicodeClipboard = TRUE;
-Bool			g_fClipboard = FALSE;
+/* Activo por defecto; -noclipboard lo desactiva */
+Bool			g_fClipboard = TRUE;
+/* Sincronizar también la selección PRIMARY (-noprimary la ignora) */
+Bool			g_fClipboardPrimary = TRUE;
+/* Espera máxima de una conversión X <-> Windows, en ms (-clipboardtimeout) */
+int			g_iClipboardTimeoutMs = 1000;
+/* Tamaño máximo aceptado de un texto del portapapeles (-clipboardmaxsize, en MB) */
+unsigned long		g_ulClipboardMaxBytes = 64UL * 1024 * 1024;
 Bool			g_fClipboardLaunched = FALSE;
 Bool			g_fClipboardStarted = FALSE;
 pthread_t		g_ptClipboardProc;
