@@ -52,7 +52,8 @@ from The Open Group.
 #undef Status
 #include <shlobj.h>
 #pragma pop_macro("Status")
-typedef HRESULT (*SHGETFOLDERPATHPROC)(
+/* SHGetFolderPathA es __stdcall: sin WINAPI la pila queda desbalanceada (crash con -O2) */
+typedef HRESULT (WINAPI *SHGETFOLDERPATHPROC)(
     HWND hwndOwner,
     int nFolder,
     HANDLE hToken,

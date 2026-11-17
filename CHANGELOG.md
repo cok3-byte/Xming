@@ -22,6 +22,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Fixed
 - Crash al arrancar con optimización: los callbacks de XACE recibían punteros a datos de un
   bloque que ya había terminado (`Xext/xace.c`). El compilador de 2005 lo toleraba por azar.
+- Crash al arrancar con optimización: `SHGetFolderPathA` y `EnumDisplayMonitors` se llamaban
+  mediante punteros sin `WINAPI`, lo que desbalanceaba la pila.
 - Las funciones OpenGL ≥ 1.2 del servidor no enlazaban con mingw-w64 (`gl.h` las declaraba
   `dllimport`).
 - El bootstrap de imake no compilaba fuera de compilación cruzada y no podía usar `/tmp` en

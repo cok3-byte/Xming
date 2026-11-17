@@ -79,7 +79,8 @@ struct GetMonitorInfoData {
     int  monitorWidth;
 };
 
-typedef wBOOL (*ENUMDISPLAYMONITORSPROC)(HDC,LPCRECT,MONITORENUMPROC,LPARAM);
+/* EnumDisplayMonitors es __stdcall: sin WINAPI la pila queda desbalanceada */
+typedef wBOOL (WINAPI *ENUMDISPLAYMONITORSPROC)(HDC,LPCRECT,MONITORENUMPROC,LPARAM);
 ENUMDISPLAYMONITORSPROC _EnumDisplayMonitors;
 
 wBOOL CALLBACK getMonitorInfo(HMONITOR hMonitor, HDC hdc, LPRECT rect, LPARAM _data);
