@@ -1,0 +1,13 @@
+# Paquetes de MSYS2 necesarios para compilar Xming (entorno MINGW32, 32 bits).
+# Una línea por paquete. winbuild/setup.ps1 los instala con pacman.
+make
+flex
+bison
+perl
+sed
+gawk
+diffutils
+mingw-w64-i686-gcc
+mingw-w64-i686-binutils
+mingw-w64-i686-winpthreads
+mingw-w64-i686-zlib

@@ -12,6 +12,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ### Added
 - Build reproducible nativo en Windows con MSYS2 + mingw-w64 (`winbuild/setup.ps1`,
   `winbuild/build.ps1`), sin depender de Cygwin ni de compilación cruzada desde Linux.
+  Usa todos los núcleos por defecto y tiene un modo `-Incremental` para iterar rápido.
+- `dist/` listo para ejecutar: `Xming.exe`, `xkbcomp.exe`, `libfreetype-6.dll`, datos XKB,
+  base de locales de Xlib, `rgb.txt`, `XErrorDB` y `XKeysymDB`.
+- Workflow de GitHub Actions que compila en `windows-latest` y publica `dist/` como artefacto.
 
 ### Changed
 - La copia de trabajo usa siempre finales de línea LF (`.gitattributes`), necesario para que
