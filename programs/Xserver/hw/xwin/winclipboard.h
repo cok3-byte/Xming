@@ -161,4 +161,20 @@ winClipboardFlushXEvents (HWND hwnd,
 			  int iWindow,
 			  Display *pDisplay,
 			  Bool fUnicodeSupport);
+
+
+/*
+ * winclipboardincr.c
+ */
+
+Bool
+winClipboardReadIncr (Display *pDisplay, Window iWindow, Atom atomProperty,
+		      XTextProperty *pxtp);
+
+unsigned long
+winClipboardIncrThreshold (Display *pDisplay);
+
+Bool
+winClipboardSendIncr (Display *pDisplay, XSelectionRequestEvent *pRequest,
+		      Atom atomType, unsigned char *pData, unsigned long ulLen);
 #endif

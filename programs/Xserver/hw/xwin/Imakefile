@@ -41,7 +41,8 @@ SRCS_CLIPBOARD = \
 	winclipboardunicode.c \
 	winclipboardwndproc.c \
 	winclipboardwrappers.c \
-	winclipboardxevents.c
+	winclipboardxevents.c \
+	winclipboardincr.c
 #endif
 
 #if GlxUseWindows
@@ -161,7 +162,8 @@ OBJS_CLIPBOARD = \
 	winclipboardunicode.o \
 	winclipboardwndproc.o \
 	winclipboardwrappers.o \
-	winclipboardxevents.o
+	winclipboardxevents.o \
+	winclipboardincr.o
 #endif
 
 #if GlxUseWindows

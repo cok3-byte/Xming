@@ -39,6 +39,7 @@
  */
 
 extern Bool		g_fUnicodeSupport;
+extern unsigned long	g_ulClipboardMaxBytes;
 
 
 /*
@@ -358,6 +359,25 @@ winClipboardFlushXEvents (HWND hwnd,
 	  free (pszConvertData);
 	  pszConvertData = NULL;
 
+	  /*
+	   * Textos que no caben en una petición: enviarlos por trozos con INCR.
+	   * winClipboardSendIncr envía también el SelectionNotify.
+	   */
+	  if (xtpText.nitems > winClipboardIncrThreshold (pDisplay))
+	    {
+	      if (!winClipboardSendIncr (pDisplay, &event.xselectionrequest,
+					 event.xselectionrequest.target,
+					 xtpText.value, xtpText.nitems))
+		ErrorF ("winClipboardFlushXEvents - SelectionRequest - "
+			"la transferencia INCR no se completó\n");
+
+	      GlobalUnlock (hGlobal);
+	      pszGlobalData = NULL;
+	      XFree (xtpText.value);
+	      xtpText.value = NULL;
+	      goto winClipboardFlushXEvents_SelectionRequest_Done;
+	    }
+
 	  /* Copy the clipboard text to the requesting window */
 	  iReturn = XChangeProperty (pDisplay,
 				     event.xselectionrequest.requestor,
@@ -574,25 +594,55 @@ winClipboardFlushXEvents (HWND hwnd,
 		  xtpText.nitems, ulReturnBytesLeft);
 #endif
 
-	  /* Request the selection data */
-	  iReturn = XGetWindowProperty (pDisplay,
-					iWindow,
-					atomLocalProperty,
-					0,
-					ulReturnBytesLeft,
-					False,
-					AnyPropertyType,
-					&xtpText.encoding,
-					&xtpText.format,
-					&xtpText.nitems,
-					&ulReturnBytesLeft,
-					&xtpText.value);
-	  if (iReturn != Success)
+	  /* La consulta de tamaño también reserva xtpText.value: liberarlo */
+	  if (xtpText.value)
 	    {
-	      ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
-		      "XGetWindowProperty () failed, aborting: %d\n",
-		      iReturn);
-	      break;
+	      XFree (xtpText.value);
+	      xtpText.value = NULL;
+	    }
+
+	  if (xtpText.encoding == XInternAtom (pDisplay, "INCR", False))
+	    {
+	      /* El cliente entrega la selección por trozos (ICCCM INCR) */
+	      if (!winClipboardReadIncr (pDisplay, iWindow, atomLocalProperty,
+					 &xtpText))
+		{
+		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
+			  "la transferencia INCR falló, aborting\n");
+		  break;
+		}
+	    }
+	  else
+	    {
+	      if (ulReturnBytesLeft > g_ulClipboardMaxBytes)
+		{
+		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
+			  "%lu bytes supera el máximo de %lu (-clipboardmaxsize), "
+			  "aborting\n", ulReturnBytesLeft, g_ulClipboardMaxBytes);
+		  XDeleteProperty (pDisplay, iWindow, atomLocalProperty);
+		  break;
+		}
+
+	      /* Request the selection data (long_length va en unidades de 32 bits) */
+	      iReturn = XGetWindowProperty (pDisplay,
+					    iWindow,
+					    atomLocalProperty,
+					    0,
+					    (ulReturnBytesLeft + 3) / 4,
+					    False,
+					    AnyPropertyType,
+					    &xtpText.encoding,
+					    &xtpText.format,
+					    &xtpText.nitems,
+					    &ulReturnBytesLeft,
+					    &xtpText.value);
+	      if (iReturn != Success)
+		{
+		  ErrorF ("winClipboardFlushXEvents - SelectionNotify - "
+			  "XGetWindowProperty () failed, aborting: %d\n",
+			  iReturn);
+		  break;
+		}
 	    }
 
 #if 0

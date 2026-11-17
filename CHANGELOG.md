@@ -19,6 +19,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Clipboard: `-noclipboard` para desactivarlo, `-noprimary` / `-primary` para decidir si la
   selección PRIMARY (texto seleccionado en un cliente X) también sustituye al portapapeles de
   Windows, `-clipboardtimeout ms` y `-clipboardmaxsize MB`.
+- Clipboard: textos grandes en ambos sentidos con el protocolo INCR de ICCCM. Antes, los
+  textos grandes copiados desde aplicaciones GTK/Qt llegaban vacíos a Windows.
 ### Changed
 - El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
   XLaunch pasa `-noclipboard` cuando se desmarca la casilla.
