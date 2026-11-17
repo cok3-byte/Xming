@@ -24,6 +24,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   `dllimport`).
 - El bootstrap de imake no compilaba fuera de compilación cruzada y no podía usar `/tmp` en
   Windows.
+- Recursos de Windows: faltaban `version.def` y `X.bmp` en el código publicado; `X.bmp` se
+  genera desde `X.ico` con `winbuild/ico2bmp.py`.
 
 ## [6.9.0.31] - 2007
 

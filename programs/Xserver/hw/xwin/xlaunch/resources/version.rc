@@ -1,6 +1,6 @@
 #include <winver.h>
 
-#include "../../../../../../../version.def"
+#include "../../../../../../version.def"
 #define XW32_VERSIONINFO_NAME "XLaunch\0"
 #define XW32_VERSIONINFO_COMMENT "XLaunch Wizard\0"
 
