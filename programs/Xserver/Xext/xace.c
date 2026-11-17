@@ -46,6 +46,18 @@ static int (*SwappedUntrustedProcVector[256])(
 
 /* Entry point for hook functions.  Called by Xserver.
  */
+/*
+ * Los "rec" de cada case solo viven dentro de su bloque: llamar a los callbacks
+ * alli mismo. Llamarlos despues del switch (como hacia el original) lee memoria
+ * fuera de su tiempo de vida, y gcc moderno la reutiliza.
+ */
+#define XACE_CALL_HOOK \
+    do { \
+	va_end(ap); \
+	CallCallbacks(&XaceHooks[hook], calldata); \
+	return prv ? *prv : 0; \
+    } while (0)
+
 int XaceHook(int hook, ...)
 {
     pointer calldata;	/* data passed to callback */
@@ -67,7 +79,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_RESOURCE_ACCESS: {
 	    XaceResourceAccessRec rec = {
@@ -80,7 +92,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_DEVICE_ACCESS: {
 	    XaceDeviceAccessRec rec = {
@@ -91,7 +103,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_PROPERTY_ACCESS: {
 	    XacePropertyAccessRec rec = {
@@ -103,7 +115,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_DRAWABLE_ACCESS: {
 	    XaceDrawableAccessRec rec = {
@@ -113,7 +125,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_MAP_ACCESS:
 	case XACE_BACKGRND_ACCESS: {
@@ -124,7 +136,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_EXT_DISPATCH:
 	case XACE_EXT_ACCESS: {
@@ -135,7 +147,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_HOSTLIST_ACCESS: {
 	    XaceHostlistAccessRec rec = {
@@ -145,7 +157,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_SITE_POLICY: {
 	    XaceSitePolicyRec rec = {
@@ -155,7 +167,7 @@ int XaceHook(int hook, ...)
 	    };
 	    calldata = &rec;
 	    prv = &rec.rval;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_DECLARE_EXT_SECURE: {
 	    XaceDeclareExtSecureRec rec = {
@@ -163,7 +175,7 @@ int XaceHook(int hook, ...)
 		va_arg(ap, Bool)
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_AUTH_AVAIL: {
 	    XaceAuthAvailRec rec = {
@@ -171,7 +183,7 @@ int XaceHook(int hook, ...)
 		va_arg(ap, XID)
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_KEY_AVAIL: {
 	    XaceKeyAvailRec rec = {
@@ -180,7 +192,7 @@ int XaceHook(int hook, ...)
 		va_arg(ap, int)
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_WINDOW_INIT: {
 	    XaceWindowRec rec = {
@@ -188,7 +200,7 @@ int XaceHook(int hook, ...)
 		va_arg(ap, WindowPtr)
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_AUDIT_BEGIN: {
 	    XaceAuditRec rec = {
@@ -196,7 +208,7 @@ int XaceHook(int hook, ...)
 		0
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	case XACE_AUDIT_END: {
 	    XaceAuditRec rec = {
@@ -204,7 +216,7 @@ int XaceHook(int hook, ...)
 		va_arg(ap, int)
 	    };
 	    calldata = &rec;
-	    break;
+	    XACE_CALL_HOOK;
 	}
 	default: {
 	    va_end(ap);
