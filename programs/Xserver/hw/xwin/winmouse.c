@@ -67,7 +67,8 @@ int
 winMouseProc (DeviceIntPtr pDeviceInt, int iState)
 {
   int 			lngMouseButtons, i;
-  int			lngWheelEvents = 2;
+  /* Rueda vertical (4/5) y horizontal (6/7) */
+  int			lngWheelEvents = 4;
   CARD8			*map;
   DevicePtr		pDevice = (DevicePtr) pDeviceInt;
 
@@ -79,8 +80,8 @@ winMouseProc (DeviceIntPtr pDeviceInt, int iState)
 
       /* Mapping of windows events to X events:
        * LEFT:1 MIDDLE:2 RIGHT:3
-       * SCROLL_UP:4 SCROLL_DOWN:5
-       * XBUTTON 1:6 XBUTTON 2:7 ...
+       * SCROLL_UP:4 SCROLL_DOWN:5 SCROLL_LEFT:6 SCROLL_RIGHT:7
+       * XBUTTON 1:8 XBUTTON 2:9 ... (convencion de X: 6/7 desplazan en horizontal)
        *
        * To map scroll wheel correctly we need at least the 3 normal buttons
        */
@@ -88,8 +89,16 @@ winMouseProc (DeviceIntPtr pDeviceInt, int iState)
         lngMouseButtons = 3;
       winMsg(X_PROBED, "%d mouse buttons found\n", lngMouseButtons);
 
+      /*
+       * Windows puede informar de 3 botones aunque lleguen eventos de los
+       * laterales (XBUTTON1/2 -> 8/9): g_winMouseButtonMap se indexa con el
+       * numero de boton, asi que el mapa debe cubrir siempre hasta el 9.
+       */
+      if (lngMouseButtons < 5)
+        lngMouseButtons = 5;
+
       /* allocate memory: 
-       * number of buttons + 2x mouse wheel event + 1 extra (offset for map) 
+       * number of buttons + 4 mouse wheel events + 1 extra (offset for map) 
        */
       map = malloc(sizeof(CARD8) * (lngMouseButtons + lngWheelEvents + 1));
     
@@ -127,25 +136,24 @@ winMouseProc (DeviceIntPtr pDeviceInt, int iState)
 }
 
 
-/* Handle the mouse wheel */
-int
-winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
+/*
+ * Convierte el desplazamiento de una rueda (vertical u horizontal) en pulsaciones
+ * del boton X correspondiente, acumulando fracciones de WHEEL_DELTA.
+ */
+static int
+winMouseWheelAxis (int iDeltaZ, int *piAccum, int iButtonPos, int iButtonNeg)
 {
-  winScreenPriv(pScreen);
-  int button; /* Button4 or Button5 */
-
-  /* Button4 = WheelUp */
-  /* Button5 = WheelDown */
+  int button;
 
   /* Do we have any previous delta stored? */
-  if ((pScreenPriv->iDeltaZ > 0
+  if ((*piAccum > 0
        && iDeltaZ > 0)
-      || (pScreenPriv->iDeltaZ < 0
+      || (*piAccum < 0
 	  && iDeltaZ < 0))
     {
       /* Previous delta and of same sign as current delta */
-      iDeltaZ += pScreenPriv->iDeltaZ;
-      pScreenPriv->iDeltaZ = 0;
+      iDeltaZ += *piAccum;
+      *piAccum = 0;
     }
   else
     {
@@ -155,7 +163,7 @@ winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
        * as blindly setting takes just as much time
        * as checking, then setting if necessary :)
        */
-      pScreenPriv->iDeltaZ = 0;
+      *piAccum = 0;
     }
 
   /*
@@ -164,7 +172,7 @@ winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
    */
   if (iDeltaZ >= WHEEL_DELTA || (-1 * iDeltaZ) >= WHEEL_DELTA)
     {
-      pScreenPriv->iDeltaZ = 0;
+      *piAccum = 0;
 	  
       /* Figure out how many whole deltas of the wheel we have */
       iDeltaZ /= WHEEL_DELTA;
@@ -176,18 +184,18 @@ winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
        * we will store the wheel delta until the threshold
        * has been reached.
        */
-      pScreenPriv->iDeltaZ = iDeltaZ;
+      *piAccum = iDeltaZ;
       return 0;
     }
 
   /* Set the button to indicate up or down wheel delta */
   if (iDeltaZ > 0)
     {
-      button = Button4;
+      button = iButtonPos;
     }
   else
     {
-      button = Button5;
+      button = iButtonNeg;
     }
 
   /*
@@ -211,6 +219,29 @@ winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
     }
 
   return 0;
+}
+
+
+/* Handle the mouse wheel: Button4 = WheelUp, Button5 = WheelDown */
+int
+winMouseWheel (ScreenPtr pScreen, int iDeltaZ)
+{
+  winScreenPriv(pScreen);
+
+  return winMouseWheelAxis (iDeltaZ, &pScreenPriv->iDeltaZ, Button4, Button5);
+}
+
+
+/*
+ * Handle the horizontal wheel (WM_MOUSEHWHEEL): positivo = derecha.
+ * Boton 6 = izquierda, boton 7 = derecha, como en Xorg.
+ */
+int
+winMouseHWheel (ScreenPtr pScreen, int iDeltaX)
+{
+  winScreenPriv(pScreen);
+
+  return winMouseWheelAxis (iDeltaX, &pScreenPriv->iDeltaH, 7, 6);
 }
 
 

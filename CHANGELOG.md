@@ -25,7 +25,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Multiwindow: títulos Unicode. Se lee `_NET_WM_NAME` (UTF-8, el que usan GTK y Qt) y las
   ventanas son Unicode, así que acentos, símbolos y CJK ya no se pierden en el título ni en
   la barra de tareas.
+- Rueda horizontal del ratón (botones X 6 y 7).
 ### Changed
+- Los botones laterales del ratón (atrás/adelante) pasan de 6/7 a 8/9, la convención de X;
+  6/7 quedan para la rueda horizontal.
 - El clipboard está activo por defecto; `-clipboard` se acepta por compatibilidad.
   XLaunch pasa `-noclipboard` cuando se desmarca la casilla.
 - El clipboard usa `AddClipboardFormatListener` (Vista o posterior) en lugar de la cadena de
@@ -39,6 +42,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- Un ratón del que Windows informa con 3 botones podía hacer leer a Xming fuera del mapa de
+  botones al pulsar un botón lateral.
 - Clipboard: al pegar en Windows un texto copiado en X, Xming vaciaba el portapapeles para
   volver a anunciarlo mientras la aplicación que pegaba aún estaba copiando los datos. Los
   textos grandes (unos 2 MB o más) llegaban vacíos y el primer pegado tras arrancar fallaba

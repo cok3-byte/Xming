@@ -641,12 +641,13 @@ winTopLevelWindowProc (HWND hwnd, UINT message,
     case WM_XBUTTONDOWN:
       if (s_pScreenPriv == NULL || s_pScreenInfo->fIgnoreInput)
 	break;
-      return winMouseButtonsHandle (s_pScreen, ButtonPress, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (s_pScreen, ButtonPress, HIWORD(wParam) + 7, wParam);
     case WM_XBUTTONUP:
       if (s_pScreenPriv == NULL || s_pScreenInfo->fIgnoreInput)
 	break;
-      return winMouseButtonsHandle (s_pScreen, ButtonRelease, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (s_pScreen, ButtonRelease, HIWORD(wParam) + 7, wParam);
 
+    case WM_MOUSEHWHEEL:	/* rueda horizontal: igual que la vertical */
     case WM_MOUSEWHEEL:
       if (SendMessage(hwnd, WM_NCHITTEST, 0, MAKELONG(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))) == HTCLIENT)
 	{

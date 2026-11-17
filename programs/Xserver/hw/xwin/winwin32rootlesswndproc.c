@@ -682,13 +682,14 @@ winMWExtWMWindowProc (HWND hwnd, UINT message,
       if (pScreenPriv == NULL || pScreenInfo->fIgnoreInput)
 	break;
       SetCapture (hwnd);
-      return winMouseButtonsHandle (pScreen, ButtonPress, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (pScreen, ButtonPress, HIWORD(wParam) + 7, wParam);
     case WM_XBUTTONUP:
       if (pScreenPriv == NULL || pScreenInfo->fIgnoreInput)
 	break;
       ReleaseCapture ();
-      return winMouseButtonsHandle (pScreen, ButtonRelease, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (pScreen, ButtonRelease, HIWORD(wParam) + 7, wParam);
 
+    case WM_MOUSEHWHEEL:
     case WM_MOUSEWHEEL:
 #if CYGMULTIWINDOW_DEBUG
       winDebug ("winMWExtWMWindowProc - WM_MOUSEWHEEL\n");
