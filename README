@@ -8,6 +8,21 @@ https://sourceforge.net/projects/xming/files/Xming-source/
 You can download binaries from:
 https://sourceforge.net/projects/xming/files/Xming/6.9.0.31/
 
+Instalar
+--------
+En https://github.com/cok3-byte/Xming/releases hay dos descargas por versión:
+Xming-fork-<versión>-setup.exe (instalador: menú Inicio, asociación de .xlaunch y
+desinstalador en "Aplicaciones instaladas") y Xming-fork-<versión>-portable.zip
+(descomprimir y ejecutar Xming.exe o XLaunch.exe). SHA256SUMS.txt permite
+comprobarlas. La primera vez que Xming escucha conexiones, Windows pregunta si
+permitirlo en el Firewall.
+
+Para generarlas desde el código, tras el build:
+
+    .\winbuild\package.ps1 -Version 1.0.0   # ficheros en winbuild\out\release
+
+Necesita NSIS de MSYS2: C:\msys64\usr\bin\pacman.exe -S mingw-w64-x86_64-nsis
+
 Compilar en Windows (nativo, MSYS2 + mingw-w64, 32 bits)
 ---------------------------------------------------------
 Desde PowerShell, en la raíz del repositorio:

@@ -3,13 +3,24 @@
 Todos los cambios relevantes de este fork se documentan en este fichero.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el
-proyecto usa [Versionado Semántico](https://semver.org/lang/es/). La numeración parte de la
-versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog` y
-`programs/Xserver/hw/xwin/ChangeLog`.
+proyecto usa [Versionado Semántico](https://semver.org/lang/es/). El fork numera sus
+versiones desde 1.0.0, sobre el código de Xming 6.9.0.31 (que es la versión que siguen
+mostrando `Xming.exe` y su diálogo About); no usa 7.x para no confundirse con el Xming
+oficial. El historial anterior está en `ChangeLog` y `programs/Xserver/hw/xwin/ChangeLog`.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-17
+
+Primer release del fork. Respecto a Xming 6.9.0.31 cambia comportamiento por defecto
+(clipboard activo, botones laterales 8/9, clientes con el otro orden de bytes rechazados,
+backing store), de ahí la versión mayor.
+
 ### Added
+- Instalador (`Xming-fork-<versión>-setup.exe`, NSIS) con accesos en el menú Inicio,
+  asociación de los `.xlaunch` a XLaunch (abrir ejecuta la sesión, editar abre el asistente)
+  y desinstalador que solo borra lo que instaló; y zip portable. Los genera
+  `winbuild/package.ps1` junto con `SHA256SUMS.txt`.
 - Build reproducible nativo en Windows con MSYS2 + mingw-w64 (`winbuild/setup.ps1`,
   `winbuild/build.ps1`), sin depender de Cygwin ni de compilación cruzada desde Linux.
   Usa todos los núcleos por defecto y tiene un modo `-Incremental` para iterar rápido.
@@ -167,3 +178,6 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 
 ### Added
 - Copia sin modificar del código fuente de Xming 6.9.0.31 publicada en SourceForge.
+
+[Unreleased]: https://github.com/cok3-byte/Xming/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/cok3-byte/Xming/releases/tag/v1.0.0
