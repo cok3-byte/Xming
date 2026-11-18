@@ -35,7 +35,12 @@
 #include <string>
 #include "resources/resources.h"
 
-LPCWSTR FilePath (HWND hwnd, bool PuTTY)
+/*
+ * Carpeta (con la barra final) donde el usuario eligió plink.exe/ssh.exe, o
+ * cadena vacía. Antes devolvía el puntero de un std::wstring local ya destruido
+ * y decía al diálogo que el búfer tenía el doble de caracteres de los reales.
+ */
+std::wstring FilePath (HWND hwnd, bool PuTTY)
      {
      OPENFILENAMEW ofn;
      std::wstring szPath;
@@ -57,7 +62,7 @@ LPCWSTR FilePath (HWND hwnd, bool PuTTY)
      ofn.hwndOwner         = hwnd;
      ofn.lpstrFile         = szFile;
      ofn.lpstrFile[0]      = L'\0';
-     ofn.nMaxFile          = sizeof(szFile);
+     ofn.nMaxFile          = sizeof(szFile) / sizeof(szFile[0]);
      if (PuTTY)
         ofn.lpstrFilter    = szFilterPuTTY;
      else
@@ -70,19 +75,12 @@ LPCWSTR FilePath (HWND hwnd, bool PuTTY)
      ofn.Flags             = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_READONLY | OFN_HIDEREADONLY;
      ofn.lpstrDefExt       = L"exe";
 
-     szPath[0]             = '\0';
      if (GetOpenFileNameW (&ofn))
 	{
 	szPath = szFile;
 	szPath = szPath.substr (0, ofn.nFileOffset);
-	for (int i = 0; i < szPath.length(); ++i)
-		if (szPath[i] == L'\\')
-			{
-			szPath.insert(i, 1, L'\\');
-			++i; // Skip inserted char
-			}
 	}
-     return szPath.c_str();
+     return szPath;
      }
 
 BOOL FileRead (LPCWSTR lpstrFileName)

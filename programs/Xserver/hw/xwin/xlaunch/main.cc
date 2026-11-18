@@ -25,6 +25,7 @@
  *
  * Authors:	Alexander Gottwald, Colin Harrison
  */
+#include <winsock2.h>
 #include "window/util.h"
 #include "window/wizard.h"
 #include "resources/resources.h"
@@ -32,10 +33,16 @@
 #include <prsht.h>
 #include <commctrl.h>
 #include <htmlhelp.h>
+#include <shellapi.h>
+#include <shlobj.h>
 
 #include <stdexcept>
 
-#include <X11/Xlib.h>
+/* Puerto TCP del display 0; el display n escucha en 6000 + n */
+static const unsigned long X_TCP_PORT = 6000;
+static const unsigned long MAX_DISPLAY = 65535 - X_TCP_PORT;
+/* Displays que se prueban cuando el campo Display está vacío */
+static const unsigned long AUTO_DISPLAYS = 64;
 
 /*
  * Ruta completa entre comillas. CreateProcess(NULL, "ssh ...") busca el
@@ -84,31 +91,128 @@ static std::wstring FindWindowsOpenSSH()
     return L"";
 }
 
-LPCWSTR FilePath (HWND hwnd, bool PuTTY);
+std::wstring FilePath (HWND hwnd, bool PuTTY);
 BOOL FileRead (LPCWSTR lpstrFileName);
 
-char *wcconvert(LPCWSTR wstr)
+/*
+ * Un argumento entre comillas según las reglas de CommandLineToArgvW: las
+ * comillas internas se escapan y las barras invertidas que las preceden se
+ * duplican. Antes la contraseña de plink iba sin comillas: una con espacios
+ * partía la línea de comandos.
+ */
+static std::wstring QuoteArg(const std::wstring &arg)
 {
-    int chars = WideCharToMultiByte(CP_ACP, 0, wstr, -1, NULL, 0, NULL, NULL);
-    if (chars == 0)
-	throw win32_error("WideCharToMultiByte");
-    char *mbstr = new char[chars];
-    chars = WideCharToMultiByte(CP_ACP, 0, wstr, -1, mbstr, chars, NULL, NULL);
-    if (chars == 0)
-	throw win32_error("WideCharToMultiByte");
-    return mbstr;
+    std::wstring out = L"\"";
+    size_t slashes = 0;
+    for (size_t i = 0; i < arg.size(); i++)
+    {
+        if (arg[i] == L'\\')
+        {
+            slashes++;
+            continue;
+        }
+        if (arg[i] == L'"')
+            out.append(slashes * 2 + 1, L'\\');
+        else
+            out.append(slashes, L'\\');
+        slashes = 0;
+        out += arg[i];
+    }
+    out.append(slashes * 2, L'\\');
+    return out + L"\"";
 }
 
-wchar_t *mbconvert(const char *mbstr)
+/* Número de display válido: solo dígitos y puerto TCP dentro de rango */
+static bool ValidDisplay(const std::wstring &display)
 {
-    int chars = MultiByteToWideChar(CP_ACP, 0, mbstr, -1, NULL, 0);
-    if (chars == 0)
-	throw win32_error("MultiByteToWideChar");
-    wchar_t *wstr = new wchar_t[chars];
-    chars = MultiByteToWideChar(CP_ACP, 0, mbstr, -1, wstr, chars);
-    if (chars == 0)
-	throw win32_error("MultiByteToWideChar");
-    return wstr;
+    if (display.empty() || display.size() > 5)
+        return false;
+    for (size_t i = 0; i < display.size(); i++)
+        if (display[i] < L'0' || display[i] > L'9')
+            return false;
+    return wcstoul(display.c_str(), NULL, 10) <= MAX_DISPLAY;
+}
+
+/*
+ * ¿Hay un servidor escuchando en 127.0.0.1:6000+n? Sustituye a XOpenDisplay:
+ * XLaunch ya no enlaza libX11 ni deja abierta una conexión X que nunca cerraba.
+ */
+static bool DisplayListening(unsigned long display)
+{
+    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (s == INVALID_SOCKET)
+        return false;
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((u_short)(X_TCP_PORT + display));
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    bool listening = connect(s, (sockaddr *)&addr, sizeof(addr)) == 0;
+    closesocket(s);
+    return listening;
+}
+
+/* Primer display libre (campo Display vacío) */
+static std::wstring FreeDisplay()
+{
+    for (unsigned long n = 0; n < AUTO_DISPLAYS; n++)
+        if (!DisplayListening(n))
+        {
+            wchar_t buffer[16];
+            swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"%lu", n);
+            return buffer;
+        }
+    return L"";
+}
+
+static std::wstring KnownFolder(int csidl)
+{
+    wchar_t buffer[MAX_PATH];
+    if (SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT, buffer) != S_OK)
+        return L"";
+    return std::wstring(buffer) + L"\\";
+}
+
+/*
+ * Fichero .xlaunch de -load/-run/-validate. Si no existe tal cual y es un nombre
+ * relativo, se busca (con y sin la extensión .xlaunch) en %APPDATA%\Xming, el
+ * Escritorio, el perfil del usuario y la carpeta de XLaunch.
+ */
+static std::wstring FindConfigFile(const std::wstring &name)
+{
+    if (FileRead(name.c_str()))
+        return name;
+    bool relative = name.find(L':') == std::wstring::npos
+        && !name.empty() && name[0] != L'\\' && name[0] != L'/';
+    if (!relative)
+        return name;
+    std::wstring dirs[4] = {
+        KnownFolder(CSIDL_APPDATA) + L"Xming\\",
+        KnownFolder(CSIDL_DESKTOPDIRECTORY),
+        KnownFolder(CSIDL_PROFILE),
+        ModuleDir(),
+    };
+    std::wstring names[2] = { name, name + L".xlaunch" };
+    for (size_t d = 0; d < 4; d++)
+        for (size_t n = 0; n < 2; n++)
+            if (dirs[d].size() > 1 && FileRead((dirs[d] + names[n]).c_str()))
+                return dirs[d] + names[n];
+    return name;
+}
+
+static int MessageFromResources(HWND hwnd, UINT message, UINT caption, UINT type,
+                                LPCWSTR detail = NULL)
+{
+    wchar_t szMessage[1024];
+    wchar_t szCaption[MAX_CAPTION];
+    HINSTANCE hInst = GetModuleHandle(NULL);
+    LoadStringW(hInst, caption, szCaption, sizeof(szCaption) / sizeof(wchar_t));
+    if (message)
+        LoadStringW(hInst, message, szMessage, sizeof(szMessage) / sizeof(wchar_t));
+    std::wstring text = message ? szMessage : L"";
+    if (detail)
+        text = text.empty() ? std::wstring(detail) : text + L"\n\n" + detail;
+    return MessageBoxW(hwnd, text.c_str(), szCaption, type);
 }
 
 bool stripspace(wchar_t *s, wchar_t *t)
@@ -128,14 +232,6 @@ bool stripspace(wchar_t *s, wchar_t *t)
     }
     *s = L'\0';
     return strip;
-}
-
-/// @brief Send WM_ENDSESSION to all program windows.
-/// This will shutdown the started xserver
-BOOL CALLBACK KillWindowsProc(HWND hwnd, LPARAM lParam)
-{
-    SendMessage(hwnd, WM_ENDSESSION, 0, 0);
-    return TRUE;
 }
 
 /// @brief Actual wizard implementation.
@@ -272,9 +368,13 @@ class CMyWizard : public CWizard
 			buffer[511] = L'\0';
 			config.display = buffer;
                     }
-                    // Check for valid input
-                    if (config.display.empty())
+                    // Vacío: el primer display libre al arrancar
+                    if (!config.display.empty() && !ValidDisplay(config.display))
+		    {
+			MessageFromResources(hwndDlg, IDS_BAD_DISPLAY_MESS, IDS_BAD_DISPLAY_CAP,
+					     MB_OK | MB_ICONEXCLAMATION);
 			SetWindowLong(hwndDlg, DWL_MSGRESULT, -1);
+		    }
                     else
                         SetWindowLong(hwndDlg, DWL_MSGRESULT, IDD_CLIENTS);
 		    return TRUE;
@@ -413,7 +513,18 @@ class CMyWizard : public CWizard
                         config.clipboard = false;
 		    // check for access control
 		    if (IsDlgButtonChecked(hwndDlg, IDC_NO_ACCESS_CONTROL))
+		    {
+			// -ac abre el servidor a cualquier equipo de la red: confirmarlo
+			if (!config.no_access_control
+			    && MessageFromResources(hwndDlg, IDS_NOAC_MESS, IDS_NOAC_CAP,
+						    MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES)
+			{
+			    CheckDlgButton(hwndDlg, IDC_NO_ACCESS_CONTROL, BST_UNCHECKED);
+			    SetWindowLong(hwndDlg, DWL_MSGRESULT, -1);
+			    return TRUE;
+			}
 			config.no_access_control = true;
+		    }
 		    else
 			config.no_access_control = false;
                     // read parameters
@@ -538,7 +649,13 @@ class CMyWizard : public CWizard
 	    else if (idd==IDD_XDMCP) offset = 3;
 	    else if (idd==IDD_CLIPBOARD) offset = 4;
 	    else if (idd==IDD_FINISH) offset = 5;
-	    HtmlHelp(hwndDlg, L"XLaunch.chm", HH_HELP_CONTEXT, 500 + offset);
+	    // La ayuda XLaunch.chm de Xming no es redistribuible y no se incluye:
+	    // sin ella se muestra un resumen de la página en lugar de nada.
+	    std::wstring chm = ModuleDir() + L"XLaunch.chm";
+	    if (FileExists(chm) && HtmlHelpW(hwndDlg, chm.c_str(), HH_HELP_CONTEXT, 500 + offset))
+		return;
+	    MessageFromResources(hwndDlg, IDS_HELP_DISPLAY + offset, IDS_HELP_CAP,
+				 MB_OK | MB_ICONINFORMATION);
 	}
 
     protected:
@@ -603,7 +720,9 @@ class CMyWizard : public CWizard
 			SendMessageW(cbwnd, CB_ADDSTRING, 0, (LPARAM)config.progs[i].c_str());
 	    SendMessage(cbwnd, CB_SETCURSEL, 0, 0);
 	}
-	LPCWSTR ShowSaveDialog(HWND parent, LPCWSTR filename)
+	// Devuelve la ruta guardada o una cadena vacía. Antes devolvía un puntero al
+	// búfer local del diálogo, que ya no existía al usarlo.
+	std::wstring ShowSaveDialog(HWND parent, LPCWSTR filename)
 	{
 	    wchar_t szTitle[512];
 	    wchar_t szFilter[512];
@@ -627,10 +746,11 @@ class CMyWizard : public CWizard
 	    ofn.lpstrFilter = szFilter; 
 	    ofn.lpstrFile= szFile; 
 	    ofn.nMaxFile = sizeof(szFile)/ sizeof(*szFile); 
-	    ofn.lpstrFileTitle = szFileTitle; 
-	    ofn.nMaxFileTitle = sizeof(szFileTitle); 
-	    ofn.lpstrInitialDir = L'\0'; 
-	    ofn.Flags = OFN_SHOWHELP | OFN_OVERWRITEPROMPT; 
+	    ofn.lpstrFileTitle = szFileTitle;
+	    ofn.nMaxFileTitle = sizeof(szFileTitle) / sizeof(*szFileTitle);
+	    ofn.lpstrInitialDir = NULL;
+	    ofn.lpstrDefExt = L"xlaunch";	// añade .xlaunch si el nombre no lleva extensión
+	    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
 	    ofn.lpstrTitle = szTitle;
 
 	    if (GetSaveFileNameW(&ofn))
@@ -641,9 +761,9 @@ class CMyWizard : public CWizard
 		{
 		    printf("Error: %s\n", e.what());
 		}
-		return (ofn.lpstrFile);
-	    } 
-	    else return (L'\0');
+		return ofn.lpstrFile;
+	    }
+	    return L"";
 	}
     public:
 	   
@@ -841,11 +961,11 @@ class CMyWizard : public CWizard
 				config.password_save = false;
 			    {
 				wchar_t szCaption[MAX_CAPTION];
-				LPCWSTR filename = ShowSaveDialog(hwndDlg, L"config.xlaunch");
-				if (!filename) break;
-			    	if (!FileRead(filename)) {
+				std::wstring filename = ShowSaveDialog(hwndDlg, L"config.xlaunch");
+				if (filename.empty()) break;
+			    	if (!FileRead(filename.c_str())) {
 				    LoadStringW(GetModuleHandle(NULL), IDS_CANNOT_OPEN, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-				    MessageBoxW(hwndDlg, filename, szCaption, MB_OK | MB_ICONEXCLAMATION);
+				    MessageBoxW(hwndDlg, filename.c_str(), szCaption, MB_OK | MB_ICONEXCLAMATION);
 				}
 			    }
 			    break;
@@ -855,33 +975,48 @@ class CMyWizard : public CWizard
             return CWizard::PageDispatch(hwndDlg, uMsg, wParam, lParam, psp);
         }
         
-        /// @brief Try to connect to server.
-        /// Repeat until successful, server died or maximum number of retries
-        /// reached.
-        Display *WaitForServer(LPCWSTR display)
+        /// @brief Espera a que Xming escuche en su puerto (hasta 12 s).
+        /// Termina antes si el proceso de Xming muere, por ejemplo porque el
+        /// display ya estaba en uso.
+        bool WaitForServer(HANDLE hServer, unsigned long display)
         {
-            int     ncycles  = 120;         /* # of cycles to wait */
-            int     cycles;                 /* Wait cycle count */
-            Display *xd;
-
-            for (cycles = 0; cycles < ncycles; cycles++) {
-                if ((xd = XOpenDisplay(wcconvert(display)))) {
-                    return xd;
-                }
-                else {
-                    Sleep(100L);
-                    continue;
-                }
+            DWORD start = GetTickCount();
+            while (GetTickCount() - start < 12000)
+            {
+                if (DisplayListening(display))
+                    return true;
+                if (WaitForSingleObject(hServer, 100) != WAIT_TIMEOUT)
+                    return false;
             }
-            return NULL;
+            return false;
         }
-               
+
         /// @brief Do the actual start of Xming and clients
 	void StartUp()
 	{
 	    std::wstring buffer;
 	    std::wstring client;
 	    bool msdos = false;
+
+	    // Display vacío: el primero libre. Un .xlaunch puede traer cualquier
+	    // texto, y va a la línea de comandos de Xming: solo se aceptan dígitos.
+	    if (config.display.empty())
+		config.display = FreeDisplay();
+	    if (!ValidDisplay(config.display))
+	    {
+		MessageFromResources(NULL, IDS_BAD_DISPLAY_MESS, IDS_BAD_DISPLAY_CAP,
+				     MB_OK | MB_ICONEXCLAMATION, config.display.c_str());
+		return;
+	    }
+	    unsigned long display_number = wcstoul(config.display.c_str(), NULL, 10);
+	    // Display ocupado: Xming no podría arrancar y el programa se conectaría
+	    // al otro servidor que ya escucha en ese puerto.
+	    if (DisplayListening(display_number))
+	    {
+		MessageFromResources(NULL, IDS_DISPLAY_IN_USE_MESS, IDS_DISPLAY_IN_USE_CAP,
+				     MB_OK | MB_ICONEXCLAMATION, (L":" + config.display).c_str());
+		return;
+	    }
 
             // Construct display strings
 	    std::wstring display_id = L":" + config.display;
@@ -960,11 +1095,7 @@ class CMyWizard : public CWizard
 			    client = L"plink ";
 			client += L"-ssh -X ";
 			if (!config.password.empty())
-			{
-				client += L"-pw ";
-				client += config.password.c_str();
-				client += L" ";
-			}
+				client += L"-pw " + QuoteArg(config.password) + L" ";
 		    }
 		    else
 		    {
@@ -994,9 +1125,6 @@ class CMyWizard : public CWizard
             // Prepare program startup
      	    STARTUPINFOW si, sic;
 	    PROCESS_INFORMATION pi, pic;
-	    HANDLE handles[2];
-	    DWORD hcount = 0; 
-            Display *dpy = NULL;
 
 	    ZeroMemory( &si, sizeof(si) );
 	    si.cb = sizeof(si);
@@ -1005,93 +1133,88 @@ class CMyWizard : public CWizard
 	    sic.cb = sizeof(sic);
 	    ZeroMemory( &pic, sizeof(pic) );
 
-	    // Start Xming process. 
-#ifdef _DEBUG
-	    printf("%s\n", buffer.c_str());
-#endif
-	    if( !CreateProcessW( NULL, (WCHAR*)buffer.c_str(), NULL, NULL, 
-                        FALSE, 0, NULL, NULL, &si, &pi )) 
+	    // Start Xming process. CreateProcessW puede escribir en la línea de
+	    // comandos: se le pasa una copia modificable.
+	    std::vector<wchar_t> cmdline(buffer.begin(), buffer.end());
+	    cmdline.push_back(L'\0');
+	    if( !CreateProcessW( NULL, &cmdline[0], NULL, NULL,
+                        FALSE, 0, NULL, NULL, &si, &pi ))
 		throw win32_error("CreateProcess failed");
-	    handles[hcount++] = pi.hProcess;
 
 	    if (!client.empty())
 	    {
                 // Set DISPLAY variable
 		SetEnvironmentVariableW(L"DISPLAY",display.c_str());
 
-                // Wait for server to startup
-                dpy = WaitForServer(display.c_str());
-                if (dpy == NULL)
+                // Esperar al servidor; si no arranca, no lanzar el programa
+                if (!WaitForServer(pi.hProcess, display_number))
                 {
-		    wchar_t szCaption[MAX_CAPTION];
-		    LoadStringW(GetModuleHandle(NULL), IDS_OPEN_FAIL, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-		    MessageBoxW(NULL, display.c_str(), szCaption, MB_OK | MB_ICONEXCLAMATION);
-                    while (hcount--)
-                        TerminateProcess(handles[hcount], (DWORD)-1);
+		    MessageFromResources(NULL, 0, IDS_OPEN_FAIL, MB_OK | MB_ICONEXCLAMATION,
+					 display.c_str());
+		    TerminateProcess(pi.hProcess, (DWORD)-1);
+		    CloseHandle(pi.hProcess);
+		    CloseHandle(pi.hThread);
+		    return;
                 }
-                
-#ifdef _DEBUG
-		printf("%s\n", client.c_str());
-#endif
 
                 // Hide a console window, unless msdos is true
 		sic.dwFlags = STARTF_USESHOWWINDOW;
 		sic.wShowWindow = SW_HIDE;
 		if (msdos) sic.wShowWindow = SW_NORMAL;
 
-		// Start the child process. 
-		if( !CreateProcessW( NULL, (WCHAR*)client.c_str(), NULL, NULL,
-                            FALSE, 0, NULL, NULL, &sic, &pic )) 
+		// Start the child process.
+		std::vector<wchar_t> clientline(client.begin(), client.end());
+		clientline.push_back(L'\0');
+		if( !CreateProcessW( NULL, &clientline[0], NULL, NULL,
+                            FALSE, 0, NULL, NULL, &sic, &pic ))
 		{
-		    wchar_t szCaption[MAX_CAPTION];
-		    LoadStringW(GetModuleHandle(NULL), IDS_PROGRAM_START_FAIL, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-                    MessageBoxW(NULL, client.c_str(), szCaption, MB_OK | MB_ICONEXCLAMATION);
-                    while (hcount--)
-                        TerminateProcess(handles[hcount], (DWORD)-1);
-		}
-		handles[hcount++] = pic.hProcess;
-	    }
-
-	    // Wait until any child process exits.
-	    DWORD ret = WaitForMultipleObjects(hcount, handles, FALSE, INFINITE );
-
-#ifdef _DEBUG
-	    printf("killing process!\n");
-#endif
-            // Check if Xming is still running
-	    DWORD exitcode;
-	    GetExitCodeProcess(pi.hProcess, &exitcode);
-	    unsigned counter = 0;
-	    while (exitcode == STILL_ACTIVE)
-	    {
-		if (++counter > 10)
+		    MessageFromResources(NULL, 0, IDS_PROGRAM_START_FAIL,
+					 MB_OK | MB_ICONEXCLAMATION, client.c_str());
 		    TerminateProcess(pi.hProcess, (DWORD)-1);
-		else
-		    // Shutdown Xming (the soft way!)
-		    EnumThreadWindows(pi.dwThreadId, KillWindowsProc, 0);
-		Sleep(500);
-		GetExitCodeProcess(pi.hProcess, &exitcode);
+		    CloseHandle(pi.hProcess);
+		    CloseHandle(pi.hThread);
+		    return;
+		}
 	    }
-	    // Kill the client
-    	    TerminateProcess(pic.hProcess, (DWORD)-1);
 
-	    // Close process and thread handles. 
+	    // Xming sigue abierto cuando termina el programa (se cierra desde su
+	    // icono de la bandeja). Antes XLaunch lo cerraba en cuanto salía el
+	    // primer programa, por ejemplo al cerrar la sesión ssh que lo lanzó.
+	    WaitForSingleObject(pi.hProcess, INFINITE);
+
+	    // Sin servidor, el programa ya no tiene dónde dibujar: cerrarlo
+	    if (pic.hProcess)
+	    {
+		if (WaitForSingleObject(pic.hProcess, 0) == WAIT_TIMEOUT)
+		    TerminateProcess(pic.hProcess, (DWORD)-1);
+		CloseHandle( pic.hProcess );
+		CloseHandle( pic.hThread );
+	    }
 	    CloseHandle( pi.hProcess );
 	    CloseHandle( pi.hThread );
-	    CloseHandle( pic.hProcess );
-	    CloseHandle( pic.hThread );
 	}
 };
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
     try {
         InitCommonControls();
         CMyWizard dialog;
 	wchar_t szMessage[MAX_MESSAGE];
 	wchar_t szCaption[MAX_CAPTION];
+	WSADATA wsa;
+
+	// Sondeo TCP del servidor (WaitForServer, FreeDisplay)
+	WSAStartup(MAKEWORD(2, 2), &wsa);
 
 	bool skip_wizard = false;
+
+	// Argumentos en UTF-16: las rutas con caracteres fuera de la página de
+	// códigos ANSI ya no se pierden.
+	int argc = 0;
+	LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	if (!argv)
+	    return -1;
 
 	if (argc != 1 && argc != 3)
 	{
@@ -1103,86 +1226,47 @@ int main(int argc, char **argv)
 
 	for (int i = 1; i < argc; i++)
 	{
-	    if (argv[i] == NULL)
-		continue;
-	    
-	    std::string arg(argv[i]);
-	    if (arg == "-load" && i + 1 < argc)
+	    std::wstring arg(argv[i]);
+	    bool load = arg == L"-load", validate = arg == L"-validate", run = arg == L"-run";
+	    if (!(load || validate || run) || i + 1 >= argc)
 	    {
-		i++;
-		if (!FileRead(mbconvert(argv[i])))
-		{
-			LoadStringW(GetModuleHandle(NULL), IDS_CANNOT_LOAD, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-			MessageBoxW(NULL, mbconvert(argv[i]), szCaption, MB_OK | MB_ICONEXCLAMATION);
-			return -1;
-		}
-		dialog.LoadConfig(mbconvert(argv[i]), false);
-		dialog.StripStart();
-		continue;
+		MessageFromResources(NULL, 0, IDS_UNKNOWN_OPTION, MB_OK | MB_ICONEXCLAMATION,
+				     arg.c_str());
+		return -1;
 	    }
-	    else if (arg == "-validate" && i + 1 < argc)
+	    std::wstring file = FindConfigFile(argv[++i]);
+	    if (!FileRead(file.c_str()))
 	    {
-		i++;
-		if (!FileRead(mbconvert(argv[i])))
-		{
-			LoadStringW(GetModuleHandle(NULL), IDS_CANNOT_VALIDATE, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-			MessageBoxW(NULL, mbconvert(argv[i]), szCaption, MB_OK | MB_ICONEXCLAMATION);
-			return -1;
-		}
-		dialog.LoadConfig(mbconvert(argv[i]), true);
-		dialog.StripStart();
-		continue;
+		MessageFromResources(NULL, 0, load ? IDS_CANNOT_LOAD
+				     : validate ? IDS_CANNOT_VALIDATE : IDS_CANNOT_RUN,
+				     MB_OK | MB_ICONEXCLAMATION, file.c_str());
+		return -1;
 	    }
-	    else if (arg == "-run" && i + 1 < argc)
+	    dialog.LoadConfig(file.c_str(), validate);
+	    dialog.StripStart();
+	    if (!run)
+		continue;
+
+	    if (dialog.PasswordStart())
 	    {
-		i++;
-		if (!FileRead(mbconvert(argv[i])))
-		{
-			LoadStringW(GetModuleHandle(NULL), IDS_CANNOT_RUN, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-			MessageBoxW(NULL, mbconvert(argv[i]), szCaption, MB_OK | MB_ICONEXCLAMATION);
-			return -1;
-		}
-		dialog.LoadConfig(mbconvert(argv[i]), false);
-
-		dialog.StripStart();
-
-		if (dialog.PasswordStart())
-		{
-		    if (dialog.PasswordStartPopulated())
-			dialog.InitPasswordMode();
-		    else
-			{
-				LoadStringW(GetModuleHandle(NULL), IDS_PASS_ENTRY_MESS, szMessage, sizeof(szMessage)/sizeof(wchar_t));
-				LoadStringW(GetModuleHandle(NULL), IDS_PASS_ENTRY_CAP, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-				MessageBoxW(NULL, szMessage, szCaption, MB_OK | MB_ICONINFORMATION);
-			}
-		}
-		else if (!dialog.StartPopulated())
-		{
-			LoadStringW(GetModuleHandle(NULL), IDS_START_POP_MESS, szMessage, sizeof(szMessage)/sizeof(wchar_t));
-			LoadStringW(GetModuleHandle(NULL), IDS_START_POP_CAP, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-			MessageBoxW(NULL, szMessage, szCaption, MB_OK | MB_ICONINFORMATION);
-		}
+		if (dialog.PasswordStartPopulated())
+		    dialog.InitPasswordMode();
 		else
-		{
-		    skip_wizard = true;
-		}
-		continue;
+		    MessageFromResources(NULL, IDS_PASS_ENTRY_MESS, IDS_PASS_ENTRY_CAP,
+					 MB_OK | MB_ICONINFORMATION);
 	    }
+	    else if (!dialog.StartPopulated())
+		MessageFromResources(NULL, IDS_START_POP_MESS, IDS_START_POP_CAP,
+				     MB_OK | MB_ICONINFORMATION);
 	    else
-	    {
-			LoadStringW(GetModuleHandle(NULL), IDS_UNKNOWN_OPTION, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-			MessageBoxW(NULL, mbconvert(arg.c_str()), szCaption, MB_OK | MB_ICONEXCLAMATION);
-			return -1;
-	    }
+		skip_wizard = true;
 	}
+	LocalFree(argv);
 
-	int ret = 0; 
+	int ret = 0;
         if (skip_wizard || (ret =dialog.ShowModal()) != 0)
 	    dialog.StartUp();
-#ifdef _DEBUG
-	printf("return %d\n", ret);
-#endif
+	WSACleanup();
 	return 0;
     } catch (std::runtime_error &e)
     {
