@@ -17,6 +17,9 @@ oficial. El historial anterior está en `ChangeLog` y `programs/Xserver/hw/xwin/
   consola. Ahora es una aplicación de ventanas, como el Xming original, y queda en segundo
   plano con su icono en el área de notificación. `xkbcomp`, que Xming lanza al arrancar,
   tampoco abre consola.
+- `Xming -help` y `-version` lanzados desde cmd o PowerShell escriben en esa consola
+  (una aplicación de ventanas no tiene salida de texto propia).
+
 ## [1.0.0] - 2026-11-17
 
 Primer release del fork. Respecto a Xming 6.9.0.31 cambia comportamiento por defecto
