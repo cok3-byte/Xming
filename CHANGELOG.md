@@ -10,6 +10,10 @@ oficial. El historial anterior está en `ChangeLog` y `programs/Xserver/hw/xwin/
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-18
+
+Xming abre sin ventana de consola.
+
 ### Added
 - `winbuild/tests/desktest.py` comprueba que Xming arranca sin ventana de consola.
 
@@ -191,5 +195,6 @@ backing store), de ahí la versión mayor.
 ### Added
 - Copia sin modificar del código fuente de Xming 6.9.0.31 publicada en SourceForge.
 
-[Unreleased]: https://github.com/cok3-byte/Xming/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/cok3-byte/Xming/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/cok3-byte/Xming/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cok3-byte/Xming/releases/tag/v1.0.0
