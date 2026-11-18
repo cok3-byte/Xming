@@ -48,6 +48,10 @@
 #endif
 
 /* WM_XBUTTON Messages. They should go into w32api. */
+/* WINVER=0x0501 oculta WM_MOUSEHWHEEL (Vista+) en winuser.h */
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL 0x020E
+#endif
 #ifndef WM_XBUTTONDOWN
 # define WM_XBUTTONDOWN 523
 #endif
@@ -461,6 +465,7 @@ typedef struct _winPrivScreenRec
   Bool			fBadDepth;
 
   int			iDeltaZ;
+  int			iDeltaH;	/* rueda horizontal */
 
   int			iConnectedClients;
 
@@ -1002,6 +1007,17 @@ winMouseProc (DeviceIntPtr pDeviceInt, int iState);
 
 int
 winMouseWheel (ScreenPtr pScreen, int iDeltaZ);
+
+int
+winMouseHWheel (ScreenPtr pScreen, int iDeltaX);
+
+
+/*
+ * winprocarg.c
+ */
+
+int
+winGetSystemDPI (void);
 
 void
 winMouseButtonsSendEvent (int iEventType, int iButton);

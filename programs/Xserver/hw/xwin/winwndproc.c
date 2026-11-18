@@ -884,7 +884,7 @@ winWindowProc (HWND hwnd, UINT message,
 #endif
 	  )
 	SetCapture (hwnd);
-      return winMouseButtonsHandle (s_pScreen, ButtonPress, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (s_pScreen, ButtonPress, HIWORD(wParam) + 7, wParam);
     case WM_XBUTTONUP:
       if (s_pScreenPriv == NULL || s_pScreenInfo->fIgnoreInput)
 	break;
@@ -894,7 +894,7 @@ winWindowProc (HWND hwnd, UINT message,
 #endif
 	  )
 	ReleaseCapture ();
-      return winMouseButtonsHandle (s_pScreen, ButtonRelease, HIWORD(wParam) + 5, wParam);
+      return winMouseButtonsHandle (s_pScreen, ButtonRelease, HIWORD(wParam) + 7, wParam);
 
     case WM_TIMER:
       if (s_pScreenPriv == NULL || s_pScreenInfo->fIgnoreInput)
@@ -962,6 +962,12 @@ winWindowProc (HWND hwnd, UINT message,
       winDebug ("winWindowProc - WM_MOUSEWHEEL\n");
 #endif
       winMouseWheel (s_pScreen, GET_WHEEL_DELTA_WPARAM(wParam));
+      break;
+
+    case WM_MOUSEHWHEEL:
+      if (s_pScreenPriv == NULL || s_pScreenInfo->fIgnoreInput)
+	break;
+      winMouseHWheel (s_pScreen, GET_WHEEL_DELTA_WPARAM(wParam));
       break;
 
     case WM_SETFOCUS:

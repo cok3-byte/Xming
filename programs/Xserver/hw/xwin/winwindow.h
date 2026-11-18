@@ -47,6 +47,11 @@
 #define WIN_SCR_PROP		"cyg_screen_prop rl"
 #define WINDOW_CLASS_X		PROJECT_NAME " X"
 #define WINDOW_TITLE_X		PROJECT_NAME " X"
+/* Versiones UTF-16 para la clase Unicode de las ventanas multiwindow */
+#define WIN_WIDEN2(s)		L ## s
+#define WIN_WIDEN(s)		WIN_WIDEN2(s)
+#define WINDOW_CLASS_XW		WIN_WIDEN(PROJECT_NAME) L" X"
+#define WINDOW_TITLE_XW		WIN_WIDEN(PROJECT_NAME) L" X"
 #define WIN_WINDOW_PROP		"cyg_window_prop_rl"
 #ifdef HAS_DEVWINDOWS
 # define WIN_MSG_QUEUE_FNAME	"/dev/windows"
@@ -114,6 +119,8 @@ typedef struct _winWMMessageRec{
 #define		WM_WM_HINTS_EVENT	(WM_USER + 10)
 #define		WM_WM_CHANGE_STATE	(WM_USER + 11)
 #define		WM_WM_MAP2		(WM_USER + 12)
+/* _NET_WM_STATE: iX = acción (0 quitar, 1 añadir, 2 alternar), iY/iWidth = átomos */
+#define		WM_WM_NET_STATE		(WM_USER + 13)
 #define		WM_MANAGE		(WM_USER + 100)
 #define		WM_UNMANAGE		(WM_USER + 102)
 

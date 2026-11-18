@@ -421,62 +421,57 @@ InitQueue (WMMsgQueuePtr pQueue)
 static void
 GetWindowName (Display *pDisplay, Window iWin, char **ppName)
 {
-  int			nResult, nNum;
+  static Display	*s_pDisplay = NULL;
+  static Atom		s_atmNetWmName, s_atmUtf8String;
+  Atom			atmType;
+  int			iFormat, nNum;
+  unsigned long		ulItems, ulLeft;
+  unsigned char		*pData = NULL;
   char			**ppList;
   XTextProperty		xtpName;
-  
-#if CYGMULTIWINDOW_DEBUG
-  ErrorF ("GetWindowName\n");
-#endif
 
   /* Intialize ppName to NULL */
   *ppName = NULL;
 
-  /* Try to get --- */
-  nResult = XGetWMName (pDisplay, iWin, &xtpName);
-  if (!nResult || !xtpName.value || !xtpName.nitems)
+  if (s_pDisplay != pDisplay)
     {
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - XGetWMName failed.  No name.\n");
-#endif
+      s_atmNetWmName = XInternAtom (pDisplay, "_NET_WM_NAME", False);
+      s_atmUtf8String = XInternAtom (pDisplay, "UTF8_STRING", False);
+      s_pDisplay = pDisplay;
+    }
+
+  /*
+   * Los clientes modernos (GTK, Qt) ponen el título en UTF-8 en _NET_WM_NAME
+   * y dejan en WM_NAME una versión degradada o vacía: tiene prioridad.
+   */
+  if (XGetWindowProperty (pDisplay, iWin, s_atmNetWmName, 0, 4096, False,
+			  s_atmUtf8String, &atmType, &iFormat, &ulItems,
+			  &ulLeft, &pData) == Success
+      && atmType == s_atmUtf8String && iFormat == 8 && ulItems > 0 && pData)
+    {
+      *ppName = malloc (ulItems + 1);
+      if (*ppName)
+	{
+	  memcpy (*ppName, pData, ulItems);
+	  (*ppName)[ulItems] = '\0';
+	}
+      XFree (pData);
       return;
     }
-  
-  /* */
-  if (xtpName.encoding == XA_STRING)
+  if (pData)
+    XFree (pData);
+
+  /* WM_NAME (STRING en Latin-1 o COMPOUND_TEXT): convertir a UTF-8 */
+  if (!XGetWMName (pDisplay, iWin, &xtpName) || !xtpName.value || !xtpName.nitems)
+    return;
+
+  if (Xutf8TextPropertyToTextList (pDisplay, &xtpName, &ppList, &nNum) >= Success
+      && nNum > 0 && *ppList)
     {
-      /* */
-      if (xtpName.value)
-	{
-	  int size = xtpName.nitems * (xtpName.format >> 3);
-	  *ppName = malloc(size + 1);
-	  strncpy(*ppName, xtpName.value, size);
-	  (*ppName)[size] = 0;
-	  XFree (xtpName.value);
-	}
-
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - XA_STRING %s\n", *ppName);
-#endif
+      *ppName = strdup (*ppList);
+      XFreeStringList (ppList);
     }
-  else
-    {
-      if (XmbTextPropertyToTextList (pDisplay, &xtpName, &ppList, &nNum) >= Success && nNum > 0 && *ppList)
-	{
-	  *ppName = strdup (*ppList);
-	  XFreeStringList (ppList);
-	}
-      XFree (xtpName.value);
-
-#if CYGMULTIWINDOW_DEBUG
-      ErrorF ("GetWindowName - %s %s\n",
-	      XGetAtomName (pDisplay, xtpName.encoding), *ppName);
-#endif
-    }
-
-#if CYGMULTIWINDOW_DEBUG
-  ErrorF ("GetWindowName - Returning\n");
-#endif
+  XFree (xtpName.value);
 }
 
 
@@ -499,6 +494,208 @@ SendXMessage (Display *pDisplay, Window iWin, Atom atmType, long nData)
 
   /* Send the event to X */
   return XSendEvent (pDisplay, iWin, False, NoEventMask, &e);
+}
+
+
+/*
+ * HWND asociado a una ventana X (propiedad que pone WM_WM_MAP), o NULL.
+ */
+
+static HWND
+winWMGetHwnd (WMInfoPtr pWMInfo, Window iWindow)
+{
+  Atom			atmType;
+  int			fmtRet;
+  unsigned long		items, remain;
+  HWND			*retHwnd, hWnd = NULL;
+
+  if (XGetWindowProperty (pWMInfo->pDisplay, iWindow, pWMInfo->atmPrivMap,
+			  0, 1, False, XA_INTEGER, &atmType, &fmtRet,
+			  &items, &remain, (unsigned char **) &retHwnd) == Success
+      && retHwnd)
+    {
+      hWnd = *retHwnd;
+      XFree (retHwnd);
+    }
+  return (hWnd && IsWindow (hWnd)) ? hWnd : NULL;
+}
+
+
+/*
+ * EWMH _NET_WM_STATE (pantalla completa, maximizada, siempre encima).
+ *
+ * Las llamadas Win32 son asíncronas: las ventanas pertenecen al hilo del
+ * servidor y este hilo no debe esperar por él. Windows no tiene maximizado por
+ * un solo eje, así que MAXIMIZED_VERT/HORZ se tratan como maximizar.
+ */
+
+#define WIN_FULLSCREEN_PROP	"XmingFullscreenSave"
+
+typedef struct {
+  LONG_PTR		lStyle;
+  WINDOWPLACEMENT	wp;
+} winFullscreenSave;
+
+static Atom	s_atmNetWmState, s_atmMaxVert, s_atmMaxHorz, s_atmFullscreen, s_atmAbove;
+
+static void
+winInitNetAtoms (Display *pDisplay)
+{
+  if (s_atmNetWmState)
+    return;
+  s_atmNetWmState = XInternAtom (pDisplay, "_NET_WM_STATE", False);
+  s_atmMaxVert = XInternAtom (pDisplay, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+  s_atmMaxHorz = XInternAtom (pDisplay, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+  s_atmFullscreen = XInternAtom (pDisplay, "_NET_WM_STATE_FULLSCREEN", False);
+  s_atmAbove = XInternAtom (pDisplay, "_NET_WM_STATE_ABOVE", False);
+}
+
+static Bool
+winWantState (int iAction, Bool fCurrent)
+{
+  return iAction == 1 ? TRUE : iAction == 0 ? FALSE : !fCurrent;
+}
+
+static void
+winSetFullscreen (HWND hWnd, Bool fWant)
+{
+  winFullscreenSave	*pSave = (winFullscreenSave *) GetPropA (hWnd, WIN_FULLSCREEN_PROP);
+
+  if (fWant && !pSave)
+    {
+      MONITORINFO	mi;
+
+      pSave = malloc (sizeof (*pSave));
+      if (!pSave)
+	return;
+      pSave->lStyle = GetWindowLongPtr (hWnd, GWL_STYLE);
+      pSave->wp.length = sizeof (WINDOWPLACEMENT);
+      GetWindowPlacement (hWnd, &pSave->wp);
+      SetPropA (hWnd, WIN_FULLSCREEN_PROP, (HANDLE) pSave);
+
+      mi.cbSize = sizeof (mi);
+      GetMonitorInfo (MonitorFromWindow (hWnd, MONITOR_DEFAULTTONEAREST), &mi);
+      SetWindowLongPtr (hWnd, GWL_STYLE,
+			pSave->lStyle & ~(WS_CAPTION | WS_THICKFRAME));
+      SetWindowPos (hWnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top,
+		    mi.rcMonitor.right - mi.rcMonitor.left,
+		    mi.rcMonitor.bottom - mi.rcMonitor.top,
+		    SWP_FRAMECHANGED | SWP_NOOWNERZORDER | SWP_ASYNCWINDOWPOS);
+    }
+  else if (!fWant && pSave)
+    {
+      RemovePropA (hWnd, WIN_FULLSCREEN_PROP);
+      SetWindowLongPtr (hWnd, GWL_STYLE, pSave->lStyle);
+      SetWindowPlacement (hWnd, &pSave->wp);
+      SetWindowPos (hWnd, NULL, 0, 0, 0, 0,
+		    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
+		    | SWP_ASYNCWINDOWPOS);
+      free (pSave);
+    }
+}
+
+static void
+winApplyNetWmState (WMInfoPtr pWMInfo, Window iWindow, HWND hWnd,
+		    int iAction, Atom atmFirst, Atom atmSecond)
+{
+  Bool	fFull = GetPropA (hWnd, WIN_FULLSCREEN_PROP) != NULL;
+  Bool	fMax = IsZoomed (hWnd);
+  Bool	fAbove = (GetWindowLongPtr (hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+  Atom	atmList[4];
+  int	n = 0;
+
+  winInitNetAtoms (pWMInfo->pDisplay);
+
+  if (atmFirst == s_atmFullscreen || atmSecond == s_atmFullscreen)
+    {
+      fFull = winWantState (iAction, fFull);
+      winSetFullscreen (hWnd, fFull);
+    }
+  if (atmFirst == s_atmMaxVert || atmFirst == s_atmMaxHorz
+      || atmSecond == s_atmMaxVert || atmSecond == s_atmMaxHorz)
+    {
+      fMax = winWantState (iAction, fMax);
+      ShowWindowAsync (hWnd, fMax ? SW_MAXIMIZE : SW_RESTORE);
+    }
+  if (atmFirst == s_atmAbove || atmSecond == s_atmAbove)
+    {
+      fAbove = winWantState (iAction, fAbove);
+      SetWindowPos (hWnd, fAbove ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
+		    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
+    }
+
+  /* EWMH: el WM mantiene la propiedad con el estado vigente */
+  if (fFull)
+    atmList[n++] = s_atmFullscreen;
+  if (fMax)
+    {
+      atmList[n++] = s_atmMaxVert;
+      atmList[n++] = s_atmMaxHorz;
+    }
+  if (fAbove)
+    atmList[n++] = s_atmAbove;
+  XChangeProperty (pWMInfo->pDisplay, iWindow, s_atmNetWmState, XA_ATOM, 32,
+		   PropModeReplace, (unsigned char *) atmList, n);
+}
+
+
+/*
+ * Al mapear: aplicar el estado que el cliente fijó antes de mostrarse
+ * (por ejemplo xterm -fullscreen).
+ */
+
+static void
+winApplyInitialNetWmState (WMInfoPtr pWMInfo, Window iWindow, HWND hWnd)
+{
+  Atom			atmType, *pAtoms = NULL;
+  int			iFormat;
+  unsigned long		ulItems, ulLeft, i;
+
+  winInitNetAtoms (pWMInfo->pDisplay);
+  if (XGetWindowProperty (pWMInfo->pDisplay, iWindow, s_atmNetWmState, 0, 32,
+			  False, XA_ATOM, &atmType, &iFormat, &ulItems, &ulLeft,
+			  (unsigned char **) &pAtoms) != Success || !pAtoms)
+    return;
+  if (atmType == XA_ATOM && iFormat == 32)
+    for (i = 0; i < ulItems; ++i)
+      winApplyNetWmState (pWMInfo, iWindow, hWnd, 1, pAtoms[i], None);
+  XFree (pAtoms);
+}
+
+
+/*
+ * Anunciarse como WM compatible con EWMH (_NET_SUPPORTING_WM_CHECK y
+ * _NET_SUPPORTED): sin esto GTK y otros clientes no usan _NET_WM_STATE.
+ */
+
+static void
+winAnnounceEwmh (Display *pDisplay)
+{
+  Window	root = DefaultRootWindow (pDisplay);
+  Window	check = XCreateSimpleWindow (pDisplay, root, -1, -1, 1, 1, 0, 0, 0);
+  Atom		atmCheck = XInternAtom (pDisplay, "_NET_SUPPORTING_WM_CHECK", False);
+  Atom		atmSupported = XInternAtom (pDisplay, "_NET_SUPPORTED", False);
+  Atom		atmName = XInternAtom (pDisplay, "_NET_WM_NAME", False);
+  Atom		atmUtf8 = XInternAtom (pDisplay, "UTF8_STRING", False);
+  Atom		atmList[6];
+
+  winInitNetAtoms (pDisplay);
+  atmList[0] = s_atmNetWmState;
+  atmList[1] = s_atmMaxVert;
+  atmList[2] = s_atmMaxHorz;
+  atmList[3] = s_atmFullscreen;
+  atmList[4] = s_atmAbove;
+  atmList[5] = atmName;
+
+  XChangeProperty (pDisplay, check, atmCheck, XA_WINDOW, 32, PropModeReplace,
+		   (unsigned char *) &check, 1);
+  XChangeProperty (pDisplay, check, atmName, atmUtf8, 8, PropModeReplace,
+		   (unsigned char *) PROJECT_NAME, strlen (PROJECT_NAME));
+  XChangeProperty (pDisplay, root, atmCheck, XA_WINDOW, 32, PropModeReplace,
+		   (unsigned char *) &check, 1);
+  XChangeProperty (pDisplay, root, atmSupported, XA_ATOM, 32, PropModeReplace,
+		   (unsigned char *) atmList, 6);
+  XFlush (pDisplay);
 }
 
 
@@ -553,7 +750,18 @@ UpdateName (WMInfoPtr pWMInfo, Window iWindow)
 			    &attr);
       if (!attr.override_redirect)
 	{
-	  SetWindowText (hWnd, pszName);
+	  /* El título está en UTF-8: pasarlo a UTF-16 para no perder caracteres */
+	  int iLen = MultiByteToWideChar (CP_UTF8, 0, pszName, -1, NULL, 0);
+	  wchar_t *pwszName = iLen > 0 ? malloc (iLen * sizeof (wchar_t)) : NULL;
+
+	  if (pwszName)
+	    {
+	      MultiByteToWideChar (CP_UTF8, 0, pszName, -1, pwszName, iLen);
+	      SetWindowTextW (hWnd, pwszName);
+	      free (pwszName);
+	    }
+	  else
+	    SetWindowTextA (hWnd, pszName);
 	  winUpdateIcon (iWindow);
 	}
 
@@ -722,6 +930,7 @@ winMultiWindowWMProc (void *pArg)
 			   1);
 	  UpdateName (pWMInfo, pNode->msg.iWindow);
 	  winUpdateIcon (pNode->msg.iWindow);
+	  winApplyInitialNetWmState (pWMInfo, pNode->msg.iWindow, pNode->msg.hwndWindow);
 #if 0
 	  /* Handles the case where there are AOT windows above it in W32 */
 	  PreserveWin32Stack (pWMInfo, pNode->msg.iWindow, GW_HWNDPREV);
@@ -806,6 +1015,17 @@ winMultiWindowWMProc (void *pArg)
 	  winMinimizeWindow (pNode->msg.iWindow);
 	  break;
 
+	case WM_WM_NET_STATE:
+	  {
+	    HWND hWnd = winWMGetHwnd (pWMInfo, pNode->msg.iWindow);
+
+	    if (hWnd)
+	      winApplyNetWmState (pWMInfo, pNode->msg.iWindow, hWnd,
+				  pNode->msg.iX, (Atom) pNode->msg.iY,
+				  (Atom) pNode->msg.iWidth);
+	  }
+	  break;
+
 	default:
 	  ErrorF ("winMultiWindowWMProc - Unknown Message.  Exiting.\n");
 	  pthread_exit (NULL);
@@ -848,8 +1068,10 @@ winMultiWindowXMsgProc (void *pArg)
   int                   iRetries;
   XEvent		event;
   Atom                  atmWmName;
+  Atom                  atmNetWmName;
   Atom                  atmWmHints;
   Atom			atmWmChange;
+  Atom			atmNetWmState;
   int			iReturn;
   XIconSize		*xis;
 
@@ -998,12 +1220,18 @@ winMultiWindowXMsgProc (void *pArg)
   atmWmName   = XInternAtom (pProcArg->pDisplay,
 			     "WM_NAME",
 			     False);
+  atmNetWmName = XInternAtom (pProcArg->pDisplay,
+			       "_NET_WM_NAME",
+			       False);
   atmWmHints   = XInternAtom (pProcArg->pDisplay,
 			      "WM_HINTS",
 			      False);
   atmWmChange  = XInternAtom (pProcArg->pDisplay,
 			      "WM_CHANGE_STATE",
 			      False);
+  atmNetWmState = XInternAtom (pProcArg->pDisplay,
+				"_NET_WM_STATE",
+				False);
 
   /* Loop until we explicitly break out */
   while (1)
@@ -1056,7 +1284,8 @@ winMultiWindowXMsgProc (void *pArg)
 				  0);
 	}
       else if (event.type == PropertyNotify
-	       && event.xproperty.atom == atmWmName)
+	       && (event.xproperty.atom == atmWmName
+		   || event.xproperty.atom == atmNetWmName))
 	{
 	  memset (&msg, 0, sizeof (msg));
 
@@ -1087,6 +1316,19 @@ winMultiWindowXMsgProc (void *pArg)
 
 	  msg.msg = WM_WM_CHANGE_STATE;
 	  msg.iWindow = event.xclient.window;
+
+	  winSendMessageToWM (pProcArg->pWMInfo, &msg);
+	}
+      else if (event.type == ClientMessage
+	       && event.xclient.message_type == atmNetWmState
+	       && event.xclient.format == 32)
+	{
+	  memset (&msg, 0, sizeof (msg));
+	  msg.msg = WM_WM_NET_STATE;
+	  msg.iWindow = event.xclient.window;
+	  msg.iX = event.xclient.data.l[0];
+	  msg.iY = event.xclient.data.l[1];
+	  msg.iWidth = event.xclient.data.l[2];
 
 	  winSendMessageToWM (pProcArg->pWMInfo, &msg);
 	}
@@ -1305,6 +1547,8 @@ winInitMultiWindowWM (WMInfoPtr pWMInfo, WMProcArgPtr pProcArg)
 				      False);
 #endif
 
+
+  winAnnounceEwmh (pWMInfo->pDisplay);
 
   if (1) {
     Cursor cursor = XCreateFontCursor (pWMInfo->pDisplay, XC_left_ptr);

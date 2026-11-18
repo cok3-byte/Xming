@@ -143,6 +143,25 @@ winInitializeDefaultScreens (void);
  * Process arguments on the command line
  */
 
+/*
+ * DPI horizontal del sistema (pantalla principal), o WIN_DEFAULT_DPI si no
+ * se puede obtener.
+ */
+int
+winGetSystemDPI (void)
+{
+  HDC hdc = GetDC (NULL);
+  int iDPI = 0;
+
+  if (hdc)
+    {
+      iDPI = GetDeviceCaps (hdc, LOGPIXELSX);
+      ReleaseDC (NULL, hdc);
+    }
+  return iDPI > 0 ? iDPI : WIN_DEFAULT_DPI;
+}
+
+
 void
 winInitializeDefaultScreens (void)
 {
@@ -167,9 +186,14 @@ winInitializeDefaultScreens (void)
   winErrorFVerb (2, "winInitializeDefaultScreens - w %d h %d\n",
 	  (int) dwWidth, (int) dwHeight);
 
-  /* Set a default DPI, if no parameter was passed */
+  /*
+   * Set a default DPI, if no parameter was passed. Xming es DPI-aware
+   * (Xming.exe.manifest): Windows ya no escala sus ventanas, asi que el DPI
+   * por defecto debe ser el del sistema (96 al 100 %, 144 al 150 %...) en
+   * lugar de 75 fijo. -dpi sigue mandando.
+   */
   if (monitorResolution == 0)
-    monitorResolution = WIN_DEFAULT_DPI;
+    monitorResolution = winGetSystemDPI ();
 
   for (i = 0; i < MAXSCREENS; ++i)
     {
@@ -206,9 +230,9 @@ winInitializeDefaultScreens (void)
       g_ScreenInfo[i].fScrollbars = FALSE;
       g_ScreenInfo[i].fNoTrayIcon = FALSE;
       g_ScreenInfo[i].iE3BTimeout = WIN_E3B_OFF;
-      g_ScreenInfo[i].dwWidth_mm = (dwWidth / WIN_DEFAULT_DPI)
+      g_ScreenInfo[i].dwWidth_mm = (dwWidth / monitorResolution)
 	* 25.4;
-      g_ScreenInfo[i].dwHeight_mm = (dwHeight / WIN_DEFAULT_DPI)
+      g_ScreenInfo[i].dwHeight_mm = (dwHeight / monitorResolution)
 	* 25.4;
       g_ScreenInfo[i].fUseWinKillKey = WIN_DEFAULT_WIN_KILL;
       g_ScreenInfo[i].fUseUnixKillKey = WIN_DEFAULT_UNIX_KILL;
