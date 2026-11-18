@@ -269,8 +269,27 @@ winInitializeDefaultScreens (void)
 /* Check if enough arguments are given for the option */
 #define CHECK_ARGS(count) if (i + count >= argc) { UseMsg (); return 0; }
 
-/* Compare the current option with the string. */ 
+/* Compare the current option with the string. */
 #define IS_OPTION(name) (strcmp (argv[i], name) == 0)
+
+/*
+ * Xming es una aplicación de ventanas y no tiene consola: lanzado desde cmd,
+ * -help y -version no mostrarían nada. Si stderr no está redirigido (a un
+ * fichero o una tubería), se escribe en la consola del proceso padre.
+ */
+static void
+winAttachParentConsole (void)
+{
+  HANDLE hErr = GetStdHandle (STD_ERROR_HANDLE);
+
+  if (hErr != NULL && hErr != INVALID_HANDLE_VALUE
+      && GetFileType (hErr) != FILE_TYPE_UNKNOWN)
+    return;
+  if (!AttachConsole (ATTACH_PARENT_PROCESS))
+    return;
+  freopen ("CONOUT$", "w", stderr);
+  freopen ("CONOUT$", "w", stdout);
+}
 
 int
 ddxProcessArgument (int argc, char *argv[], int i)
@@ -321,6 +340,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
    */ 
   if (IS_OPTION ("-help") || IS_OPTION("-h") || IS_OPTION("--help"))
     {
+      winAttachParentConsole ();
       g_fNoHelpMessageBox = TRUE;
       UseMsg();
       exit (0);
@@ -329,6 +349,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
 
   if (IS_OPTION ("-version") || IS_OPTION("--version"))
     {
+      winAttachParentConsole ();
       winLogVersionInfo ();
       g_fNoHelpMessageBox = TRUE;
       UseMsg();

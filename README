@@ -104,6 +104,10 @@ Opciones del servidor añadidas
 El log (Xming.N.log en %TEMP%) indica la versión real de Windows, y "View log"
 de la bandeja lo abre con el editor asociado a .log.
 
+Xming no abre ventana de consola: queda en segundo plano con su icono en el área
+de notificación de la barra de tareas, desde donde se cierra. "Xming -help"
+lanzado desde cmd o PowerShell escribe el uso en esa consola.
+
 Licencia
 --------
 Este fork no es el Xming oficial ni tiene el apoyo de su autor, Colin Harrison.

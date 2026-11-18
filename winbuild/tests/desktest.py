@@ -9,7 +9,8 @@ Requisitos:
 
 Cubre: títulos Unicode (_NET_WM_NAME), rueda horizontal (botones 6/7) y botones
 laterales (8/9), DPI del sistema, y _NET_WM_STATE (maximizar, encima, pantalla
-completa). La prueba de ratón mueve el cursor un momento y lo devuelve a su sitio.
+completa), y que Xming arranca sin ventana de consola (también la de xkbcomp). La prueba
+de ratón mueve el cursor un momento y lo devuelve a su sitio.
 """
 import ctypes
 import ctypes.wintypes as wt
@@ -223,8 +224,60 @@ try:
 finally:
     for c in clients:
         c.kill()
-    wsl(f"pkill xclock; pkill xev; xauth remove {host}:{DISP}; true")
+    wsl(f"pkill xclock; pkill xev; true")
     srv.kill()
+    srv.wait()
+    time.sleep(1)
+
+
+# 6) Sin ventana de consola: Xming es una aplicación de ventanas y xkbcomp, que lanza
+# al arrancar, no abre una consola propia.
+XMING = os.path.join(DIST, "Xming.exe")
+CONSOLE_CLASSES = ("ConsoleWindowClass", "CASCADIA_HOSTING_WINDOW_CLASS")
+
+
+def pe_subsystem(path):
+    with open(path, "rb") as f:
+        head = f.read(4096)
+    pe = struct.unpack_from("<I", head, 0x3C)[0]
+    return struct.unpack_from("<H", head, pe + 24 + 68)[0]  # IMAGE_OPTIONAL_HEADER.Subsystem
+
+
+def console_windows():
+    found = set()
+
+    def cb(hwnd, _):
+        cls = ctypes.create_unicode_buffer(256)
+        u32.GetClassNameW(hwnd, cls, 256)
+        if cls.value in CONSOLE_CLASSES and u32.IsWindowVisible(hwnd):
+            found.add(hwnd)
+        return True
+
+    u32.EnumWindows(EnumProc(cb), 0)
+    return found
+
+
+try:
+    sub = pe_subsystem(XMING)
+    check("Xming.exe es una aplicación de ventanas (subsistema GUI)", sub == 2, f"subsistema={sub}")
+    r = subprocess.run([XMING, "-help"], capture_output=True, timeout=30, cwd=DIST)
+    check("-help con stderr redirigido muestra el uso", b"-hostintitle" in r.stdout + r.stderr,
+          f"{len(r.stdout + r.stderr)} bytes")
+
+    # Arranque como desde el Explorador: sin redirigir nada.
+    before = console_windows()
+    srv = subprocess.Popen([XMING, f":{DISP}", "-multiwindow", "-auth", AUTH], cwd=DIST)
+    new = set()
+    end = time.time() + 8
+    while time.time() < end:
+        new |= console_windows() - before
+        time.sleep(0.1)
+    check("arrancar Xming no abre ninguna ventana de consola", not new, f"{len(new)} nuevas")
+    info = wsl(f"{ENV} xdpyinfo | grep 'vendor string'")
+    check("el servidor sin consola acepta clientes", "vendor string" in info, info.strip())
+finally:
+    srv.kill()
+    wsl(f"xauth remove {host}:{DISP}; true")
     os.remove(AUTH)
     os.rmdir(TMP)
 

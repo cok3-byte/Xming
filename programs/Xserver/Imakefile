@@ -1055,7 +1055,12 @@ XWINW32  = -lgdi32
 #endif
 XWINSYSLIBS = $(FONTLIBS) $(LDPRELIBS) $(XWINX11) $(SYSLIBS) $(XWINW32)
 
-EXTRA_LDOPTIONS = -e _mainCRTStartup
+/*
+ * -mwindows: Xming es una aplicación de ventanas (subsistema GUI), como el Xming
+ * original. Sin él, mingw-w64 lo enlazaba como programa de consola y al abrirlo
+ * aparecía una ventana de cmd. La entrada sigue siendo main().
+ */
+EXTRA_LDOPTIONS = -mwindows -e _mainCRTStartup
 
 #if HasParallelMake
 MakeMutex($(XWINDIRS) $(XWINOBJS) $(XWINLIB) $(XWINLIBS) $(XWINSYSLIBS))

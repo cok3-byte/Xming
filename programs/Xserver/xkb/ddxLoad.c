@@ -133,7 +133,9 @@ Win32System(const char *cmdline)
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
 
-    if (!CreateProcess(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) 
+    /* xkbcomp es un programa de consola y Xming no tiene consola: sin
+       CREATE_NO_WINDOW, Windows abriría una ventana de cmd en cada arranque. */
+    if (!CreateProcess(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
 	LPVOID buffer;
 	if (!FormatMessage( 
