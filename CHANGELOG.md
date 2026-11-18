@@ -53,6 +53,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Licencia MIT para los cambios del fork (`LICENSE`) y `THIRD-PARTY-NOTICES.txt` con las
   licencias de cada componente. El build las reúne en `dist/COPYING.txt`, junto con la
   licencia de FreeType, que exige acompañar a los binarios.
+- `-hostintitle`: en multiwindow, el título de las ventanas de clientes de otro equipo
+  lleva " @ equipo", para distinguir el mismo programa abierto en varios servidores.
 - `+byteswappedclients` para aceptar clientes con el otro orden de bytes (ver *Security*).
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el

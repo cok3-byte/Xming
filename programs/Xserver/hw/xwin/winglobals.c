@@ -113,6 +113,8 @@ Bool			g_fUnicodeClipboard = TRUE;
 Bool			g_fClipboard = TRUE;
 /* Sincronizar también la selección PRIMARY (-noprimary la ignora) */
 Bool			g_fClipboardPrimary = TRUE;
+/* Multiwindow: añadir " @ equipo" al título de clientes remotos (-hostintitle) */
+Bool			g_fHostInTitle = FALSE;
 /* Espera máxima de una conversión X <-> Windows, en ms (-clipboardtimeout) */
 int			g_iClipboardTimeoutMs = 1000;
 /* Tamaño máximo aceptado de un texto del portapapeles (-clipboardmaxsize, en MB) */

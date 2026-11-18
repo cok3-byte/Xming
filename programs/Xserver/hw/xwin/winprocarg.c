@@ -51,6 +51,7 @@ extern Bool			g_fInitializedDefaultScreens;
 extern Bool			g_fUnicodeClipboard;
 extern Bool			g_fClipboard;
 extern Bool			g_fClipboardPrimary;
+extern Bool			g_fHostInTitle;
 extern int			g_iClipboardTimeoutMs;
 extern unsigned long		g_ulClipboardMaxBytes;
 #endif
@@ -945,6 +946,20 @@ ddxProcessArgument (int argc, char *argv[], int i)
   if (IS_OPTION ("-noprimary"))
     {
       g_fClipboardPrimary = FALSE;
+      return 1;
+    }
+
+  /*
+   * Look for the '-hostintitle' / '-nohostintitle' arguments
+   */
+  if (IS_OPTION ("-hostintitle"))
+    {
+      g_fHostInTitle = TRUE;
+      return 1;
+    }
+  if (IS_OPTION ("-nohostintitle"))
+    {
+      g_fHostInTitle = FALSE;
       return 1;
     }
 

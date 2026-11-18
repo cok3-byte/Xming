@@ -98,6 +98,11 @@ Ignore the PRIMARY selection: only the CLIPBOARD selection is
 synchronized, so selecting text in an X client does not replace the
 Windows clipboard.
 .TP 8
+.B \-hostintitle
+In multiwindow mode, append \fB@\fP and the name of the computer the client
+runs on (its WM_CLIENT_MACHINE property) to the title of windows of remote
+clients. Off by default; \fB\-nohostintitle\fP turns it off again.
+.TP 8
 .B "\-clipboardtimeout \fIms\fP"
 Maximum time, in milliseconds, to wait for an X client while converting
 clipboard data (100\-60000, default 1000).
