@@ -137,6 +137,7 @@ typedef struct _XMsgProcArgRec {
 extern char *display;
 extern unsigned int g_uiAuthDataLen;
 extern char *g_pAuthData;
+extern Bool g_fHostInTitle;
 
 /* Cookie interna (winauth.c) para conectar cuando el servidor usa -auth o XDMCP */
 static void
@@ -476,6 +477,55 @@ GetWindowName (Display *pDisplay, Window iWin, char **ppName)
 
 
 /*
+ * -hostintitle: añade " @ equipo" (WM_CLIENT_MACHINE) al título de las ventanas
+ * de clientes que corren en otro equipo, salvo que el título ya lo nombre.
+ */
+
+static int
+winHostNameLen (const char *psz)
+{
+  const char *pszDot = strchr (psz, '.');
+  return pszDot ? (int) (pszDot - psz) : (int) strlen (psz);
+}
+
+static void
+AppendHostName (Display *pDisplay, Window iWin, char **ppName)
+{
+  XTextProperty		xtp;
+  char			szLocal[256];
+  DWORD			dwLocal = sizeof (szLocal);
+  char			*pszHost, *pszNew;
+  int			iHost;
+
+  if (!*ppName || !XGetWMClientMachine (pDisplay, iWin, &xtp))
+    return;
+  if (xtp.encoding != XA_STRING || xtp.format != 8 || !xtp.value
+      || xtp.nitems == 0 || xtp.nitems > 255)
+    {
+      if (xtp.value)
+	XFree (xtp.value);
+      return;
+    }
+  pszHost = (char *) xtp.value;
+  pszHost[xtp.nitems] = '\0';	/* Xlib reserva un byte más para el NUL */
+  iHost = winHostNameLen (pszHost);
+
+  if (iHost > 0
+      && !(GetComputerNameExA (ComputerNameDnsHostname, szLocal, &dwLocal)
+	   && winHostNameLen (szLocal) == iHost
+	   && _strnicmp (szLocal, pszHost, iHost) == 0)
+      && strstr (*ppName, pszHost) == NULL
+      && (pszNew = malloc (strlen (*ppName) + strlen (pszHost) + 4)) != NULL)
+    {
+      sprintf (pszNew, "%s @ %s", *ppName, pszHost);
+      free (*ppName);
+      *ppName = pszNew;
+    }
+  XFree (xtp.value);
+}
+
+
+/*
  * Send a message to the X server from the WM thread
  */
 
@@ -742,6 +792,8 @@ UpdateName (WMInfoPtr pWMInfo, Window iWindow)
 
   /* Set the Windows window name */
   GetWindowName (pWMInfo->pDisplay, iWindow, &pszName);
+  if (g_fHostInTitle)
+    AppendHostName (pWMInfo->pDisplay, iWindow, &pszName);
   if (pszName)
     {
       /* Get the window attributes */

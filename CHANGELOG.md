@@ -50,8 +50,29 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `winbuild/tests/gltest.py`: pruebas de OpenGL indirecto con `glxinfo`, `glxgears` y una
   sonda de GLX 1.3 desde WSL.
 - README: cómo usar OpenGL y sus límites (OpenGL 1.x indirecto, sin OpenGL 3+).
+- Licencia MIT para los cambios del fork (`LICENSE`) y `THIRD-PARTY-NOTICES.txt` con las
+  licencias de cada componente. El build las reúne en `dist/COPYING.txt`, junto con la
+  licencia de FreeType, que exige acompañar a los binarios.
+- `-hostintitle`: en multiwindow, el título de las ventanas de clientes de otro equipo
+  lleva " @ equipo", para distinguir el mismo programa abierto en varios servidores.
+- `+byteswappedclients` para aceptar clientes con el otro orden de bytes (ver *Security*).
+- El log indica la versión real de Windows (antes decía "Vista" en Windows 11).
+- XLaunch: con el campo Display vacío usa el primer display libre.
+- XLaunch: un nombre relativo de `.xlaunch` en `-run`/`-load`/`-validate` se busca
+  también en `%APPDATA%\Xming`, el Escritorio, el perfil y la carpeta de XLaunch, con o sin
+  la extensión. Al guardar se añade `.xlaunch` si falta.
+- XLaunch: F1/Help muestra un resumen de cada página cuando no está `XLaunch.chm` (la ayuda
+  de Xming no es redistribuible y no se incluye); antes no pasaba nada.
+- `winbuild/tests/xltest.py`: pruebas de estas opciones y de XLaunch desde Windows y WSL.
+- README: uso de XLaunch, opciones nuevas del servidor y licencias.
 
 ### Changed
+- XLaunch deja Xming abierto cuando termina el programa que lanzó (por ejemplo, al salir
+  de la sesión ssh); antes lo cerraba en ese momento. Se cierra desde la bandeja.
+- XLaunch ya no enlaza libX11: comprueba que Xming ha arrancado conectando a su puerto
+  TCP, y deja de mantener abierta una conexión X que nunca cerraba.
+- El fork se identifica como tal: el *vendor string* del servidor, el contacto del log y
+  el diálogo About dicen que es un fork no oficial, y el botón "Fork" abre su repositorio.
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
   tráfico a través de SSH. `-bs` lo desactiva.
@@ -73,6 +94,15 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- El timbre sonaba aunque se hubiera silenciado (`xset b off`, `-f 0`).
+- XLaunch: si Xming no arrancaba, lanzaba igualmente el programa; y si el programa no se
+  podía lanzar, seguía esperando con un identificador de proceso inválido.
+- XLaunch: con un display ya en uso lanzaba el programa contra el otro servidor; ahora
+  avisa y no arranca nada.
+- XLaunch: guardar la configuración y elegir la ruta de plink/ssh usaban punteros a datos
+  ya liberados, y el diálogo de ruta creía tener un búfer del doble de su tamaño.
+- XLaunch: los argumentos con caracteres fuera de la página de códigos ANSI (rutas de
+  `.xlaunch` con otros alfabetos) se perdían.
 - OpenGL no funcionaba con clientes actuales: Mesa actual (probado con 25.2) exige un servidor
   GLX 1.3 y Xming anunciaba 1.2, así que `glxinfo`, `glxgears` y cualquier aplicación GL
   fallaban con "couldn't find RGB GLX visual". Ahora anuncia GLX 1.3 y los FBConfigs
@@ -87,6 +117,20 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   botones al pulsar un botón lateral.
 
 ### Security
+- Los clientes con el otro orden de bytes se rechazan por defecto, como en xorg-server
+  actual: el código que traduce sus peticiones (`SProc*`) es el de más fallos de seguridad
+  conocidos y casi nadie lo necesita. `+byteswappedclients` los vuelve a aceptar.
+- "View log" y "View Licence" lanzaban `notepad` por nombre (se buscaba también en el
+  directorio actual) y copiaban la ruta en un búfer fijo de 256 bytes. Ahora abren el
+  fichero con su programa asociado o el Bloc de notas de la carpeta del sistema, y la
+  licencia se busca junto al ejecutable y no en el directorio actual.
+- XLaunch: el número de display de un `.xlaunch` se añadía sin comprobar a la línea de
+  comandos de Xming (`Display="0 -ac"` desactivaba el control de acceso); ahora solo se
+  aceptan dígitos.
+- XLaunch pide confirmación al marcar "No Access Control" (`-ac`), que abre el servidor a
+  cualquier equipo de la red.
+- XLaunch: la contraseña de plink iba sin comillas, así que una con espacios partía la
+  línea de comandos y el resto se interpretaba como opciones de plink.
 - XLaunch lanzaba `Xming`, `ssh` y `plink` por nombre, y Windows los busca también en el
   directorio actual: un ejecutable con ese nombre dejado ahí se ejecutaba en su lugar. Ahora
   usa rutas absolutas entre comillas.

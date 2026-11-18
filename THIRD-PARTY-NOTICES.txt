@@ -1,0 +1,92 @@
+Third-party notices
+===================
+
+This is an unofficial fork of Xming 6.9.0.31, the release of Xming whose
+source Colin Harrison published on SourceForge in 2007. It is not made, endorsed or
+supported by the Xming author. The changes made in this fork are covered by the
+MIT license in LICENSE.
+
+The source is the X Window System X11R6.9 tree with the Windows server
+(hw/xwin) adapted for Xming. Each source file keeps its own copyright and
+permission notice, which remain authoritative. This file summarizes the
+licenses of what is built into, or shipped with, Xming.exe and XLaunch.exe.
+All of them allow modification and redistribution in source and binary form.
+
+
+1. X Window System (X11R6.9) and the Windows X server (hw/xwin)
+---------------------------------------------------------------
+MIT/X11-style licenses of The Open Group, the X Consortium, The XFree86
+Project, Harold L Hunt II, Earle F. Philhower III, Kensuke Matsuzaki, Colin
+Harrison and the other authors named in each file. The usual form is:
+
+  Permission to use, copy, modify, distribute, and sell this software and its
+  documentation for any purpose is hereby granted without fee, provided that
+  the above copyright notice appear in all copies and that both that
+  copyright notice and this permission notice appear in supporting
+  documentation.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+  OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  Except as contained in this notice, the name of the copyright holders shall
+  not be used in advertising or otherwise to promote the sale, use or other
+  dealings in this Software without prior written authorization.
+
+
+2. XLaunch
+----------
+Copyright (c) 2005 Alexander Gottwald, with changes by Colin Harrison. MIT
+license; the full text is in programs/Xserver/hw/xwin/xlaunch/COPYING.
+XLaunch.xsd in this fork was written from scratch and is covered by LICENSE.
+
+
+3. GLX (programs/Xserver/GL/glx)
+--------------------------------
+Copyright (c) 1991-2000 Silicon Graphics, Inc. SGI Free Software License B,
+version 1.1, as stated in each file (http://oss.sgi.com/projects/FreeB/).
+SGI re-released this license in 2008 as version 2.0, which has the same terms
+as the MIT/X11 license.
+
+
+4. Mesa (programs/Xserver/GL, extras/Mesa)
+------------------------------------------
+Copyright (c) 1999-2005 Brian Paul. MIT license. Only the core Mesa code is
+used by the server; Mesa's GLU library (GNU LGPL) is not built.
+
+
+5. FreeType (libfreetype-6.dll, extras/freetype2)
+-------------------------------------------------
+Portions of this software are copyright (c) 1996-2002 The FreeType Project
+(www.freetype.org). All rights reserved.
+Used under the FreeType License (FTL), whose full text follows at the end of
+this file in the binary distribution (extras/freetype2/docs/FTL.txt in the
+source).
+
+
+6. zlib (extras/zlib)
+---------------------
+Copyright (c) 1995-2002 Jean-loup Gailly and Mark Adler. zlib license:
+permission is granted to use, alter and redistribute it freely, provided the
+origin is not misrepresented, altered versions are marked as such and the
+notice is kept in source distributions.
+
+
+7. Bitmap fonts (fonts/misc, fonts/75dpi, fonts/100dpi)
+-------------------------------------------------------
+From the X11R6.9 font set (Adobe, Digital Equipment Corporation, Bigelow &
+Holmes, Bitstream, Sun, Markus Kuhn and others). Each BDF file names its
+copyright holder in its COPYRIGHT property, and several of the misc fonts are
+in the public domain. They are redistributed under the terms the X.Org
+Foundation lists for them in its license document:
+https://www.x.org/releases/X11R7.7/doc/xorg-docs/License.html
+Font names such as Times and Helvetica are trademarks of their owners.
+
+
+8. XKB data, rgb.txt, locale data, XErrorDB, XKeysymDB
+------------------------------------------------------
+From X11R6.9, MIT/X11-style licenses as above.

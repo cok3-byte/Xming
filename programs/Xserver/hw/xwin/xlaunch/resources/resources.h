@@ -134,3 +134,17 @@
 #define IDS_PASS_ENTRY_CAP	521
 #define IDS_START_POP_MESS	522
 #define IDS_START_POP_CAP	523
+#define IDS_BAD_DISPLAY_MESS	524
+#define IDS_BAD_DISPLAY_CAP	525
+#define IDS_NOAC_MESS		526
+#define IDS_NOAC_CAP		527
+#define IDS_HELP_CAP		528
+#define IDS_DISPLAY_IN_USE_MESS	529
+#define IDS_DISPLAY_IN_USE_CAP	536
+/* Ayuda sin XLaunch.chm: una por página, en el orden de WizardHelp */
+#define IDS_HELP_DISPLAY	530
+#define IDS_HELP_CLIENTS	531
+#define IDS_HELP_PROGRAM	532
+#define IDS_HELP_XDMCP		533
+#define IDS_HELP_CLIPBOARD	534
+#define IDS_HELP_FINISH		535
