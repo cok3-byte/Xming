@@ -64,6 +64,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - XLaunch: F1/Help muestra un resumen de cada página cuando no está `XLaunch.chm` (la ayuda
   de Xming no es redistribuible y no se incluye); antes no pasaba nada.
 - `winbuild/tests/xltest.py`: pruebas de estas opciones y de XLaunch desde Windows y WSL.
+- README: uso de XLaunch, opciones nuevas del servidor y licencias.
+
 ### Changed
 - XLaunch deja Xming abierto cuando termina el programa que lanzó (por ejemplo, al salir
   de la sesión ssh); antes lo cerraba en ese momento. Se cierra desde la bandeja.
