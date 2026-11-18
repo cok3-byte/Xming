@@ -240,6 +240,8 @@ void GlxExtensionInit(void)
     __glXContextRes = CreateNewResourceType((DeleteType)ContextGone);
     __glXClientRes = CreateNewResourceType((DeleteType)ClientGone);
     __glXPixmapRes = CreateNewResourceType((DeleteType)PixmapGone);
+    __glXWindowRes = CreateNewResourceType((DeleteType)__glXWindowGone);
+    __glXWindowLinkRes = CreateNewResourceType((DeleteType)__glXWindowLinkGone);
 
     /*
     ** Add extension to server extensions.
@@ -265,6 +267,8 @@ void GlxExtensionInit(void)
     __glXBadCurrentWindow = extEntry->errorBase + GLXBadCurrentWindow;
     __glXBadRenderRequest = extEntry->errorBase + GLXBadRenderRequest;
     __glXBadLargeRequest = extEntry->errorBase + GLXBadLargeRequest;
+    __glXBadFBConfig = extEntry->errorBase + GLXBadFBConfig;
+    __glXBadWindow = extEntry->errorBase + GLXBadWindow;
     __glXUnsupportedPrivateRequest = extEntry->errorBase +
       			GLXUnsupportedPrivateRequest;
 

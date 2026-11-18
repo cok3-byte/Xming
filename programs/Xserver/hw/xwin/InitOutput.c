@@ -79,6 +79,9 @@ extern int			g_iLogVerbose;
 Bool				g_fLogInited;
 
 extern Bool			g_fXdmcpEnabled;
+extern int			defaultBackingStore;
+extern Bool			disableBackingStore;
+extern Bool			enableBackingStore;
 extern Bool			g_fAuthEnabled;
 #ifdef HAS_DEVWINDOWS
 extern int			g_fdMessageQueue;
@@ -418,6 +421,66 @@ winGetBaseDir(void)
 }
 #endif
 
+/*
+ * Fuentes del usuario: %APPDATA%\Xming\fonts y cada subcarpeta suya que tenga
+ * fonts.dir se añaden al final del font path. Instalar una fuente es copiarla
+ * con su fonts.dir sin permisos de administrador. Solo se aceptan rutas locales
+ * absolutas (no UNC) por si APPDATA apunta a un recurso de red.
+ */
+static void
+winAddUserFontDirs (void)
+{
+  char		szBase[MAX_PATH], szPattern[MAX_PATH], szDir[MAX_PATH];
+  const char	*pszAppData = getenv ("APPDATA");
+  WIN32_FIND_DATAA fd;
+  HANDLE	hFind;
+  char		*pszNew;
+  size_t	len;
+
+  if (!pszAppData || !pszAppData[0] || pszAppData[1] != ':'
+      || snprintf (szBase, sizeof (szBase), "%s\\Xming\\fonts", pszAppData)
+	 >= (int) sizeof (szBase))
+    return;
+
+#define WIN_ADD_FONT_DIR(dir)						\
+  do {									\
+    char szDirFile[MAX_PATH];						\
+    if (snprintf (szDirFile, sizeof (szDirFile), "%s\\fonts.dir", dir)	\
+	< (int) sizeof (szDirFile)					\
+	&& GetFileAttributesA (szDirFile) != INVALID_FILE_ATTRIBUTES	\
+	&& !strchr (dir, ','))						\
+      {									\
+	len = strlen (defaultFontPath) + strlen (dir) + 2;		\
+	pszNew = malloc (len);						\
+	if (pszNew)							\
+	  {								\
+	    snprintf (pszNew, len, "%s,%s", defaultFontPath, dir);	\
+	    defaultFontPath = pszNew;					\
+	    winMsg (X_DEFAULT, "Added user font directory \"%s\"\n", dir); \
+	  }								\
+      }									\
+  } while (0)
+
+  WIN_ADD_FONT_DIR (szBase);
+
+  if (snprintf (szPattern, sizeof (szPattern), "%s\\*", szBase) >= (int) sizeof (szPattern))
+    return;
+  hFind = FindFirstFileA (szPattern, &fd);
+  if (hFind == INVALID_HANDLE_VALUE)
+    return;
+  do
+    {
+      if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	  && strcmp (fd.cFileName, ".") && strcmp (fd.cFileName, "..")
+	  && snprintf (szDir, sizeof (szDir), "%s\\%s", szBase, fd.cFileName)
+	     < (int) sizeof (szDir))
+	WIN_ADD_FONT_DIR (szDir);
+    }
+  while (FindNextFileA (hFind, &fd));
+  FindClose (hFind);
+#undef WIN_ADD_FONT_DIR
+}
+
 static void
 winFixupPaths (void)
 {
@@ -613,6 +676,7 @@ winFixupPaths (void)
         changed_fontpath = TRUE;
     }
 #endif /* RELOCATE_PROJECTROOT */
+    winAddUserFontDirs ();
     if (changed_fontpath)
         winMsg (font_from, "FontPath set to \"%s\"\n", defaultFontPath);
 
@@ -1063,6 +1127,19 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
 
   /* Log the command line */
   winLogCommandLine (argc, argv);
+
+  /*
+   * Backing store por defecto (+bs -wm): al destapar una ventana X el servidor
+   * restaura su contenido en lugar de enviar Expose, y el cliente no tiene que
+   * redibujarla (caro a traves de un tunel SSH). -bs lo desactiva; se decide
+   * aqui, ya leidos los argumentos, porque +bs ganaria sobre -bs.
+   */
+  if (serverGeneration == 1 && !disableBackingStore)
+    {
+      enableBackingStore = TRUE;
+      if (defaultBackingStore == NotUseful)
+	defaultBackingStore = WhenMapped;
+    }
 
 #if CYGDEBUG
   winDebug ("InitOutput\n");

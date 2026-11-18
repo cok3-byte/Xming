@@ -141,7 +141,12 @@ LoadAuthorization (void)
     if (!authorization_file)
 	return 0;
 
-    f = Fopen (authorization_file, "r");
+    /*
+     * Modo binario: en Windows "r" abre en modo texto, y una cookie con un byte
+     * 0x1A (fin de fichero) o con la secuencia CR LF llegaba corrompida y se
+     * rechazaba.
+     */
+    f = Fopen (authorization_file, "rb");
     if (!f)
 	return -1;
 

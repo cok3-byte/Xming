@@ -28,21 +28,22 @@
 std::string win32_error::message(DWORD errorcode)
 {
     LPVOID lpMsgBuf;
-    if (!FormatMessage( 
+    /* win32_error devuelve std::string: pedir el mensaje en ANSI aunque haya UNICODE */
+    if (!FormatMessageA( 
                 FORMAT_MESSAGE_ALLOCATE_BUFFER | 
                 FORMAT_MESSAGE_FROM_SYSTEM | 
                 FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
                 errorcode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-                (LPTSTR) &lpMsgBuf,
+                (LPSTR) &lpMsgBuf,
                 0,
                 NULL ))
     {
         return "Unknown error in FormatMessage";
     }
 
-    std::string ret((LPCTSTR)lpMsgBuf);
+    std::string ret((LPCSTR)lpMsgBuf);
     LocalFree( lpMsgBuf );
     return ret;
 }

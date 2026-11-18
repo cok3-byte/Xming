@@ -62,14 +62,14 @@ __GLXdispatchSingleProcPtr __glXSingleTable[__GLX_SINGLE_TABLE_SIZE] = {
 	__glXCreatePixmap,
 	__glXDestroyGLXPixmap, /* glXDestroyPixmap */
 	__glXCreateNewContext,
-	__glXNoSuchSingleOpcode, /* glXQueryContext */
+	__glXQueryContext,
 	__glXMakeContextCurrent,
 	__glXNoSuchSingleOpcode, /* glXCreatePbuffer */
 	__glXNoSuchSingleOpcode, /* glXDestroyPbuffer */
-	__glXNoSuchSingleOpcode, /* glXGetDrawableAttributes */
+	__glXGetDrawableAttributes,
 	__glXNoSuchSingleOpcode, /* glXChangeDrawableAttributes */
-	__glXNoSuchSingleOpcode, /* glXCreateWindow */
-	__glXNoSuchSingleOpcode, /* glXDestroyWindow */
+	__glXCreateWindow,
+	__glXDestroyWindow,
 	__glXNoSuchSingleOpcode,
 	__glXNoSuchSingleOpcode,
 	__glXNoSuchSingleOpcode,
@@ -463,14 +463,14 @@ __GLXdispatchSingleProcPtr __glXSwapSingleTable[__GLX_SINGLE_TABLE_SIZE] = {
 	__glXSwapCreatePixmap,
 	__glXSwapDestroyGLXPixmap, /* glXDestroyPixmap */
 	__glXSwapCreateNewContext,
-	__glXNoSuchSingleOpcode, /* glXQueryContext */
+	__glXSwapQueryContext,
 	__glXSwapMakeContextCurrent,
 	__glXNoSuchSingleOpcode, /* glXCreatePbuffer */
 	__glXNoSuchSingleOpcode, /* glXDestroyPbuffer */
-	__glXNoSuchSingleOpcode, /* glXGetDrawableAttributes */
+	__glXSwapGetDrawableAttributes,
 	__glXNoSuchSingleOpcode, /* glXChangeDrawableAttributes */
-	__glXNoSuchSingleOpcode, /* glXCreateWindow */
-	__glXNoSuchSingleOpcode, /* glXDestroyWindow */
+	__glXSwapCreateWindow,
+	__glXSwapDestroyWindow,
 	__glXNoSuchSingleOpcode,
 	__glXNoSuchSingleOpcode,
 	__glXNoSuchSingleOpcode,

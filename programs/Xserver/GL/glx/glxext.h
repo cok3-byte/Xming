@@ -81,6 +81,12 @@ extern int DoMakeCurrent( __GLXclientState *cl, GLXDrawable drawId,
     GLXDrawable readId, GLXContextID contextId, GLXContextTag tag );
 extern int DoGetVisualConfigs(__GLXclientState *cl, unsigned screen,
     GLboolean do_swap);
+extern int __glXWindowGone(pointer value, XID id);
+extern int __glXWindowLinkGone(pointer value, XID id);
+extern int DoCreateGLXWindow(__GLXclientState *cl);
+extern int DoDestroyGLXWindow(__GLXclientState *cl, XID glxwindow);
+extern int DoGetDrawableAttributes(__GLXclientState *cl, XID drawId);
+extern int DoQueryContext(__GLXclientState *cl, XID contextId);
 extern int DoGetFBConfigs(__GLXclientState *cl, unsigned screen,
     GLboolean do_swap);
 extern int DoCreateContext(__GLXclientState *cl, GLXContextID gcId,

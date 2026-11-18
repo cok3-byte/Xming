@@ -323,7 +323,9 @@ void CConfig::Load(LPCWSTR filename, bool validate)
 	   p_ParseError->get_linepos(&l_Pos);
 	   p_ParseError->Release();
 	   LoadStringW(GetModuleHandle(NULL), IDS_INVALID_MESS, szMessage, sizeof(szMessage)/sizeof(wchar_t));
-	   swprintf(buffer, szMessage, filename, l_Line, l_Pos, (LPCWSTR)bstr_Value);
+	   /* Con límite: un nombre de fichero largo desbordaba buffer[512] */
+	   _snwprintf(buffer, 511, szMessage, filename, l_Line, l_Pos, (LPCWSTR)bstr_Value);
+	   buffer[511] = L'\0';
 	   MessageBoxW(NULL, buffer, szCaption, MB_OK | MB_ICONEXCLAMATION);
 	   SysFreeString(bstr_Value);
 	}
@@ -347,7 +349,8 @@ void CConfig::Load(LPCWSTR filename, bool validate)
 	   HRCALL(p_ParseError->get_reason(&bstr_Value), "get_reason");
 	   LoadStringW(GetModuleHandle(NULL), IDS_TRY_SAVE_MESS, szMessage, sizeof(szMessage)/sizeof(wchar_t));
 	   LoadStringW(GetModuleHandle(NULL), IDS_TRY_SAVE_CAP, szCaption, sizeof(szCaption)/sizeof(wchar_t));
-	   swprintf(buffer, szMessage, filename, (LPCWSTR)bstr_Value);
+	   _snwprintf(buffer, 511, szMessage, filename, (LPCWSTR)bstr_Value);
+	   buffer[511] = L'\0';
 	   MessageBoxW(NULL, buffer, szCaption, MB_OK | MB_ICONINFORMATION);
 	   SysFreeString(bstr_Value);
 	}

@@ -37,6 +37,53 @@
 
 #include <X11/Xlib.h>
 
+/*
+ * Ruta completa entre comillas. CreateProcess(NULL, "ssh ...") busca el
+ * ejecutable también en el directorio actual: un ssh.exe o Xming.exe dejado ahí
+ * se ejecutaría en su lugar.
+ */
+static std::wstring QuotePath(const std::wstring &path)
+{
+    return L"\"" + path + L"\"";
+}
+
+static bool FileExists(const std::wstring &path)
+{
+    DWORD attr = GetFileAttributesW(path.c_str());
+    return attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+/* Carpeta de XLaunch.exe, donde también está Xming.exe */
+static std::wstring ModuleDir()
+{
+    wchar_t buffer[MAX_PATH];
+    DWORD len = GetModuleFileNameW(NULL, buffer, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH)
+        return L"";
+    std::wstring path(buffer, len);
+    size_t pos = path.find_last_of(L"\\/");
+    return pos == std::wstring::npos ? L"" : path.substr(0, pos + 1);
+}
+
+/*
+ * ssh.exe del OpenSSH integrado en Windows 10/11, o cadena vacía. XLaunch es de
+ * 32 bits: en un Windows de 64 bits, System32 se redirige a SysWOW64 (donde no
+ * está OpenSSH), así que primero se prueba Sysnative.
+ */
+static std::wstring FindWindowsOpenSSH()
+{
+    wchar_t windir[MAX_PATH];
+    UINT len = GetSystemWindowsDirectoryW(windir, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH)
+        return L"";
+    std::wstring dir(windir);
+    const wchar_t *subdirs[] = { L"\\Sysnative\\OpenSSH\\ssh.exe", L"\\System32\\OpenSSH\\ssh.exe" };
+    for (size_t i = 0; i < sizeof(subdirs) / sizeof(subdirs[0]); i++)
+        if (FileExists(dir + subdirs[i]))
+            return dir + subdirs[i];
+    return L"";
+}
+
 LPCWSTR FilePath (HWND hwnd, bool PuTTY);
 BOOL FileRead (LPCWSTR lpstrFileName);
 
@@ -295,6 +342,8 @@ class CMyWizard : public CWizard
 		    {
 			int reads = 0;
 			BOOL puttyset = IsDlgButtonChecked(hwndDlg, IDC_CLIENT_REMOTE_PUTTY);
+			if (!puttyset && config.protocol_path.empty() && !FindWindowsOpenSSH().empty())
+			    reads = 2;  // ssh.exe del sistema encontrado: no preguntar
 			wchar_t buffer[MAX_PATH];
 			for (reads = 0; reads < 2; reads++)
 			{
@@ -717,6 +766,7 @@ class CMyWizard : public CWizard
 
                     }
 		case WM_NOTIFY:
+		  {
 		    LPNMHDR lpnm = (LPNMHDR) lParam;
 		    if (lpnm->code == PSN_SETACTIVE)
 		    {
@@ -752,6 +802,7 @@ class CMyWizard : public CWizard
 				break;
 			}
 		    }
+		  }
 		    break;
                 case WM_COMMAND:
                     // Handle control messages
@@ -838,11 +889,14 @@ class CMyWizard : public CWizard
 
 #ifdef _DEBUG
             // Debug only: Switch to Xming installation directory
-	    SetCurrentDirectory("C:\\Programme\\Xming");
+	    SetCurrentDirectory(L"C:\\Programme\\Xming");
 #endif	    
 
             // Build Xming commandline
-	    buffer = L"Xming " + display_id + L" ";
+	    {
+		std::wstring xming = ModuleDir() + L"Xming.exe";
+		buffer = (FileExists(xming) ? QuotePath(xming) : std::wstring(L"Xming")) + L" " + display_id + L" ";
+	    }
 	    switch (config.window)
 	    {
 		case CConfig::MultiWindow:
@@ -898,11 +952,13 @@ class CMyWizard : public CWizard
                     std::wstring host = config.host;
                     if (!config.user.empty())
                         host = config.user + L"@" + config.host;
-		    if (!config.protocol_path.empty())
-			client = config.protocol_path.c_str();
 		    if (config.clientstart == CConfig::PuTTY)
 		    {
-			client += L"plink -ssh -X ";
+			if (!config.protocol_path.empty())
+			    client = QuotePath(config.protocol_path + L"plink.exe") + L" ";
+			else
+			    client = L"plink ";
+			client += L"-ssh -X ";
 			if (!config.password.empty())
 			{
 				client += L"-pw ";
@@ -912,8 +968,13 @@ class CMyWizard : public CWizard
 		    }
 		    else
 		    {
-			if (!GetEnvironmentVariable("SSH_AGENT_PID",0,0)) msdos = true;
-			client += L"ssh -Y ";
+			std::wstring ssh = config.protocol_path.empty()
+			    ? FindWindowsOpenSSH() : config.protocol_path + L"ssh.exe";
+			if (!GetEnvironmentVariable(L"SSH_AGENT_PID",0,0)) msdos = true;
+			client = (ssh.empty() ? std::wstring(L"ssh") : QuotePath(ssh)) + L" -Y ";
+			// Conexiones lentas (casilla de compresión): mantener viva la sesión
+			if (config.compress)
+			    client += L"-o ServerAliveInterval=30 ";
 		    }
 		    if (config.compress)
 			client += L"-C ";

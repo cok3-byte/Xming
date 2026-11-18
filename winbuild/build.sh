@@ -19,6 +19,13 @@ if [ "${MSYSTEM:-}" != "MINGW32" ]; then
 fi
 
 echo "gcc: $(command -v gcc) ($(gcc -dumpmachine), $(gcc -dumpversion))"
+
+# MSYS2 convierte las rutas Unix de los argumentos de programas nativos: un
+# -DPROJECTROOT="/usr/X11R6" llegaba a gcc como "C:/msys64/usr/X11R6", mientras
+# que el font path por defecto (lista con comas) no se convertía. El prefijo dejaba
+# de coincidir y Xming no reubicaba las fuentes ni rgb.txt a su carpeta. Los -D son
+# cadenas para tiempo de ejecución: no deben convertirse nunca.
+export MSYS2_ARG_CONV_EXCL="-D"
 echo "modo: $MODE, trabajos paralelos: $JOBS"
 
 BOOT_CFLAGS="-std=gnu89 -fpermissive -fcommon"
@@ -61,10 +68,17 @@ if [ ! -f "$XMING" ]; then
     exit 1
 fi
 
+# XLaunch (asistente de arranque) no está en el árbol imake: Makefile propio que
+# enlaza contra la libX11 de exports/lib.
+XLAUNCH_DIR="programs/Xserver/hw/xwin/xlaunch"
+rm -f "$XLAUNCH_DIR/XLaunch.exe"
+make -C "$XLAUNCH_DIR" -j"$JOBS"
+
 rm -rf "$DIST"
 mkdir -p "$DIST"
 cp "$XMING" "$DIST/"
 for f in programs/Xserver/hw/xwin/xlaunch/XLaunch.exe \
+         programs/Xserver/hw/xwin/xlaunch/XLaunch.xsd \
          programs/rgb/rgb.txt \
          programs/xkbcomp/xkbcomp.exe \
          exports/bin/libfreetype-6.dll \
@@ -81,6 +95,25 @@ for d in compat geometry keycodes keymap rules semantics symbols types; do
 done
 # Quitar restos de imake (Makefile, Imakefile...) de los datos copiados
 find "$DIST/xkb" \( -name 'Makefile*' -o -name 'Imakefile' -o -name '*.dep' \) -delete
+
+# Fuentes bitmap: el font path por defecto apunta a <directorio del exe>\fonts\{misc,75dpi,
+# 100dpi}. libXfont lee BDF comprimidas con gzip, así que no hace falta bdftopcf ni
+# mkfontdir: fonts.dir se genera con el nombre XLFD de la línea FONT de cada BDF (el
+# lector toma como nombre el resto de la línea, que puede llevar espacios).
+# Pocos procesos (crear procesos en MSYS2 es caro): un awk para todos los nombres y
+# gzip en paralelo por lotes.
+for d in misc 75dpi 100dpi; do
+    src="fonts/bdf/$d"
+    out="$DIST/fonts/$d"
+    mkdir -p "$out"
+    (cd "$src" && awk '/^FONT /{sub(/^FONT /, ""); sub(/\r$/, ""); print FILENAME ".gz " $0; nextfile}' *.bdf) \
+        > "$out/fonts.dir.tmp"
+    { wc -l < "$out/fonts.dir.tmp" | tr -d ' '; cat "$out/fonts.dir.tmp"; } > "$out/fonts.dir"
+    rm -f "$out/fonts.dir.tmp"
+    cp "$src"/*.bdf "$out/"
+    find "$out" -name '*.bdf' -print0 | xargs -0 -n 32 -P "$JOBS" gzip -9 -n
+    if [ -f "$src/fonts.alias" ]; then cp "$src/fonts.alias" "$out/"; fi
+done
 
 # Base de datos de locales de Xlib: Xming fija XLOCALEDIR=<directorio del exe>\locale.
 # Sin ella el WM multiwindow y el clipboard terminan con "Locale not supported by X".

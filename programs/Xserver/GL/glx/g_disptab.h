@@ -58,6 +58,10 @@ extern int __glXClientInfo(__GLXclientState*, GLbyte*);
 extern int __glXMakeContextCurrent(__GLXclientState*, GLbyte*);
 extern int __glXGetFBConfigs(__GLXclientState*, GLbyte*);
 extern int __glXCreateNewContext(__GLXclientState*, GLbyte*);
+extern int __glXQueryContext(__GLXclientState*, GLbyte*);
+extern int __glXGetDrawableAttributes(__GLXclientState*, GLbyte*);
+extern int __glXCreateWindow(__GLXclientState*, GLbyte*);
+extern int __glXDestroyWindow(__GLXclientState*, GLbyte*);
 extern int __glXCreatePixmap(__GLXclientState*, GLbyte*);
 
 extern int __glXDisp_NewList(__GLXclientState*, GLbyte*);
@@ -358,6 +362,10 @@ extern int __glXSwapClientInfo(__GLXclientState*, GLbyte*);
 extern int __glXSwapMakeContextCurrent(__GLXclientState*, GLbyte*);
 extern int __glXSwapGetFBConfigs(__GLXclientState*, GLbyte*);
 extern int __glXSwapCreateNewContext(__GLXclientState*, GLbyte*);
+extern int __glXSwapQueryContext(__GLXclientState*, GLbyte*);
+extern int __glXSwapGetDrawableAttributes(__GLXclientState*, GLbyte*);
+extern int __glXSwapCreateWindow(__GLXclientState*, GLbyte*);
+extern int __glXSwapDestroyWindow(__GLXclientState*, GLbyte*);
 extern int __glXSwapCreatePixmap(__GLXclientState*, GLbyte*);
 
 extern int __glXDispSwap_NewList(__GLXclientState*, GLbyte*);
