@@ -10,6 +10,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 ## [Unreleased]
 
 ### Added
+- Instalador (`Xming-fork-<versión>-setup.exe`, NSIS) con accesos en el menú Inicio,
+  asociación de los `.xlaunch` a XLaunch (abrir ejecuta la sesión, editar abre el asistente)
+  y desinstalador que solo borra lo que instaló; y zip portable. Los genera
+  `winbuild/package.ps1` junto con `SHA256SUMS.txt`.
 - Build reproducible nativo en Windows con MSYS2 + mingw-w64 (`winbuild/setup.ps1`,
   `winbuild/build.ps1`), sin depender de Cygwin ni de compilación cruzada desde Linux.
   Usa todos los núcleos por defecto y tiene un modo `-Incremental` para iterar rápido.
