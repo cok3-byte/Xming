@@ -87,6 +87,17 @@ for f in programs/Xserver/hw/xwin/xlaunch/XLaunch.exe \
     if [ -f "$f" ]; then cp "$f" "$DIST/"; fi
 done
 
+# Licencias: el botón "View Licence" de Xming abre COPYING.txt junto al exe.
+# FreeType pide que su licencia acompañe a la distribución binaria.
+{
+    cat LICENSE
+    printf '\n\n'
+    cat THIRD-PARTY-NOTICES.txt
+    printf '\n\nThe FreeType License (FTL)\n==========================\n\n'
+    # FTL.txt trae un © en Latin-1: se escribe (c) para que el fichero sea ASCII
+    LC_ALL=C sed 's/\xa9/(c)/g' extras/freetype2/docs/FTL.txt
+} | sed -e 's/\r$//' -e 's/$/\r/' > "$DIST/COPYING.txt"
+
 # Datos XKB: Xming busca <directorio del exe>\xkb (InitOutput.c, XkbBaseDirectory)
 # y escribe ahí los mapas compilados por xkbcomp.
 mkdir -p "$DIST/xkb/compiled"
