@@ -10,6 +10,13 @@ oficial. El historial anterior está en `ChangeLog` y `programs/Xserver/hw/xwin/
 
 ## [Unreleased]
 
+### Added
+### Fixed
+- Al abrir Xming (menú Inicio, doble clic o XLaunch) aparecía también una ventana de
+  consola, que al cerrarse cerraba el servidor: el build lo enlazaba como programa de
+  consola. Ahora es una aplicación de ventanas, como el Xming original, y queda en segundo
+  plano con su icono en el área de notificación. `xkbcomp`, que Xming lanza al arrancar,
+  tampoco abre consola.
 ## [1.0.0] - 2026-11-17
 
 Primer release del fork. Respecto a Xming 6.9.0.31 cambia comportamiento por defecto
