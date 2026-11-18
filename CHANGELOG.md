@@ -43,6 +43,13 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Fuentes del usuario: `%APPDATA%\Xming\fonts` y cada subcarpeta suya con `fonts.dir` se
   añaden al font path al arrancar, sin permisos de administrador.
 - `winbuild/tests/fonttest.py`: pruebas de fuentes contra clientes X reales en WSL.
+- GLX 1.3: `glXCreateWindow`/`glXDestroyWindow`, `glXQueryDrawable` y `glXQueryContext`
+  (lo usa `glXImportContextEXT`). Faltan los pbuffers.
+- El log de Xming dice qué driver OpenGL de Windows dibuja GLX, y avisa si es el
+  renderizador por software de Microsoft ("GDI Generic").
+- `winbuild/tests/gltest.py`: pruebas de OpenGL indirecto con `glxinfo`, `glxgears` y una
+  sonda de GLX 1.3 desde WSL.
+- README: cómo usar OpenGL y sus límites (OpenGL 1.x indirecto, sin OpenGL 3+).
 
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
@@ -66,6 +73,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- OpenGL no funcionaba con clientes actuales: Mesa actual (probado con 25.2) exige un servidor
+  GLX 1.3 y Xming anunciaba 1.2, así que `glxinfo`, `glxgears` y cualquier aplicación GL
+  fallaban con "couldn't find RGB GLX visual". Ahora anuncia GLX 1.3 y los FBConfigs
+  incluyen `GLX_DRAWABLE_TYPE` y `GLX_RENDER_TYPE`. El dibujo lo hace la GPU de Windows.
 - `-auth` rechazaba a veces clientes con la cookie correcta: el servidor leía el fichero de
   autorización en modo texto, así que una cookie con un byte `0x1A` o con CR LF llegaba
   corrompida (aproximadamente 1 de cada 15 cookies aleatorias).

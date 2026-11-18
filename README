@@ -42,6 +42,24 @@ Xming: los toolkits que hacen muchas peticiones de ida y vuelta (GTK 3/4, Qt
 con mucho texto) seguirán lentos con latencia alta; para eso existen
 protocolos con caché como NX o x2go.
 
+OpenGL (GLX)
+------------
+Xming implementa GLX 1.3 indirecto sobre el driver OpenGL de Windows (WGL): las
+aplicaciones X envían las órdenes OpenGL a Xming y las dibuja la GPU del equipo
+Windows. El log de Xming dice qué driver se usa ("GLX: OpenGL via WGL: ..."); si
+pone "GDI Generic", no hay driver OpenGL de la GPU (escritorio remoto, máquina
+virtual) y se dibuja por software.
+
+Con Mesa en el cliente (Linux, WSL) hay que pedir GLX indirecto:
+    export LIBGL_ALWAYS_INDIRECT=1
+    glxinfo | grep -E "GLX version|OpenGL renderer"
+    glxgears
+
+Límites: el protocolo indirecto solo transporta OpenGL 1.x de función fija
+(Xming anuncia OpenGL 1.2); las aplicaciones que exigen OpenGL 3 o superior o
+core profile no funcionan así y necesitan dibujar en el lado remoto (por ejemplo,
+con VirtualGL). No hay pbuffers. Para desactivar GLX: -extension GLX.
+
                        README for X11R6.9 and X11R7.0
 
                             The X.Org Foundation

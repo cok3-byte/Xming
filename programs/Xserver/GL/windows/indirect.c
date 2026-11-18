@@ -442,6 +442,23 @@ static BOOL glWinCreateContextReal(__GLcontext *gc, WindowPtr pWin)
         return FALSE;
     }
 
+    {
+        /* Say once which OpenGL driver renders, so the log shows whether
+           GLX runs on the GPU or on Microsoft's software renderer. */
+        static BOOL logged = FALSE;
+        if (!logged) {
+            const char *vendor = (const char *) glGetString(GL_VENDOR);
+            const char *renderer = (const char *) glGetString(GL_RENDERER);
+            const char *version = (const char *) glGetString(GL_VERSION);
+            logged = TRUE;
+            ErrorF("GLX: OpenGL via WGL: %s, %s, %s\n",
+                   vendor ? vendor : "?", renderer ? renderer : "?",
+                   version ? version : "?");
+            if (renderer && strcmp(renderer, "GDI Generic") == 0)
+                ErrorF("GLX: no hardware OpenGL driver (software rendering)\n");
+        }
+    }
+
     ReleaseDC(gc->winInfo.hwnd, dc);
 
     return TRUE;

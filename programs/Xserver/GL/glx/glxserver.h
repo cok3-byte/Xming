@@ -75,7 +75,7 @@ typedef struct __GLXdrawablePrivateRec __GLXdrawablePrivate;
 
 
 #define GLX_SERVER_MAJOR_VERSION 1
-#define GLX_SERVER_MINOR_VERSION 2
+#define GLX_SERVER_MINOR_VERSION 3
 
 #ifndef True
 #define True 1
@@ -191,6 +191,9 @@ extern __GLXrenderSizeData __glXRenderSizeTable_EXT[];
 extern RESTYPE __glXContextRes;
 extern RESTYPE __glXClientRes;
 extern RESTYPE __glXPixmapRes;
+extern RESTYPE __glXWindowRes;
+extern RESTYPE __glXWindowLinkRes;
+extern XID __glXResolveDrawableId(XID id);
 extern RESTYPE __glXDrawableRes;
 
 /************************************************************************/
