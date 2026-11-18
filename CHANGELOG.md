@@ -11,6 +11,8 @@ oficial. El historial anterior está en `ChangeLog` y `programs/Xserver/hw/xwin/
 ## [Unreleased]
 
 ### Added
+- `winbuild/tests/desktest.py` comprueba que Xming arranca sin ventana de consola.
+
 ### Fixed
 - Al abrir Xming (menú Inicio, doble clic o XLaunch) aparecía también una ventana de
   consola, que al cerrarse cerraba el servidor: el build lo enlazaba como programa de
