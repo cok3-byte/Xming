@@ -76,6 +76,7 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   X11 y Win32, `ar` de binutils moderno, winpthreads en lugar de pthreads-win32).
 
 ### Fixed
+- El timbre sonaba aunque se hubiera silenciado (`xset b off`, `-f 0`).
 - OpenGL no funcionaba con clientes actuales: Mesa actual (probado con 25.2) exige un servidor
   GLX 1.3 y Xming anunciaba 1.2, así que `glxinfo`, `glxgears` y cualquier aplicación GL
   fallaban con "couldn't find RGB GLX visual". Ahora anuncia GLX 1.3 y los FBConfigs
