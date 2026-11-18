@@ -56,6 +56,7 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `-hostintitle`: en multiwindow, el título de las ventanas de clientes de otro equipo
   lleva " @ equipo", para distinguir el mismo programa abierto en varios servidores.
 - `+byteswappedclients` para aceptar clientes con el otro orden de bytes (ver *Security*).
+- El log indica la versión real de Windows (antes decía "Vista" en Windows 11).
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra

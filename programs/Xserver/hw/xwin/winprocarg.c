@@ -1644,6 +1644,37 @@ winLogCommandLine (int argc, char *argv[])
 
 
 /*
+ * Versión real de Windows. GetVersionEx devuelve 6.2 (Windows 8) a los
+ * programas cuyo manifiesto no declara versiones más nuevas, así que el log
+ * decía "Vista" en Windows 11; RtlGetVersion (ntdll) no miente.
+ */
+
+typedef LONG (WINAPI *winRtlGetVersionProc) (OSVERSIONINFOW *);
+
+static void
+winLogOSVersion (void)
+{
+  OSVERSIONINFOW osvi;
+  winRtlGetVersionProc pRtlGetVersion = (winRtlGetVersionProc)
+    GetProcAddress (GetModuleHandle ("ntdll.dll"), "RtlGetVersion");
+  const char *pszName = "Windows";
+
+  memset (&osvi, 0, sizeof (osvi));
+  osvi.dwOSVersionInfoSize = sizeof (osvi);
+  if (!pRtlGetVersion || pRtlGetVersion (&osvi) != 0)
+    return;
+  if (osvi.dwMajorVersion == 10)
+    pszName = osvi.dwBuildNumber >= 22000 ? "Windows 11" : "Windows 10";
+  else if (osvi.dwMajorVersion == 6)
+    pszName = osvi.dwMinorVersion == 3 ? "Windows 8.1"
+      : osvi.dwMinorVersion == 2 ? "Windows 8"
+      : osvi.dwMinorVersion == 1 ? "Windows 7" : "Windows Vista";
+  ErrorF ("OS: %s (%lu.%lu.%lu)\n", pszName, osvi.dwMajorVersion,
+	  osvi.dwMinorVersion, osvi.dwBuildNumber);
+}
+
+
+/*
  * winLogVersionInfo - Log Xming version information
  */
 
@@ -1657,10 +1688,15 @@ winLogVersionInfo (void)
   ErrorF ("Welcome to the %s X Server\n", PROJECT_NAME);
   ErrorF ("Vendor: %s\n", VENDOR_STRING);
   ErrorF ("Release: %s\n", VERSION_STRING);
-  if (error) ErrorF ("winLogVersionInfo - Can't initialize freetype library\n");
-  FT_Library_Version(library, &amajor, &aminor, &apatch);
-  ErrorF ("FreeType2: %d.%d.%d\n", amajor, aminor, apatch);
-  FT_Done_FreeType(library);
+  if (error)
+    ErrorF ("winLogVersionInfo - Can't initialize freetype library\n");
+  else
+    {
+      FT_Library_Version(library, &amajor, &aminor, &apatch);
+      ErrorF ("FreeType2: %d.%d.%d\n", amajor, aminor, apatch);
+      FT_Done_FreeType(library);
+    }
+  winLogOSVersion ();
   ErrorF ("Contact: %s\n\n", VENDOR_CONTACT);
   if (g_pszCommandLine) ErrorF ("%s\n\n", g_pszCommandLine);
 }
