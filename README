@@ -60,6 +60,46 @@ Límites: el protocolo indirecto solo transporta OpenGL 1.x de función fija
 core profile no funcionan así y necesitan dibujar en el lado remoto (por ejemplo,
 con VirtualGL). No hay pbuffers. Para desactivar GLX: -extension GLX.
 
+XLaunch
+-------
+    XLaunch                      asistente
+    XLaunch -run sesion          arranca sin asistente
+    XLaunch -load sesion         abre el asistente con esa configuración
+
+Un nombre relativo de .xlaunch se busca también, con o sin la extensión, en
+%APPDATA%\Xming, el Escritorio, el perfil del usuario y la carpeta de XLaunch.
+Con el campo Display vacío se usa el primer display libre; si el que se pide ya
+está en uso, XLaunch avisa en lugar de lanzar el programa contra otro servidor.
+Xming sigue abierto cuando termina el programa que lanzó XLaunch (por ejemplo,
+al salir de la sesión ssh); se cierra desde su icono de la bandeja.
+
+No marques "No Access Control" (-ac) salvo que lo necesites: cualquier equipo
+que llegue a este por la red podría conectarse a Xming, leer lo que se teclea y
+capturar las ventanas X. Con PuTTY es mejor Pageant que escribir la contraseña:
+plink la recibe en la línea de comandos, visible para otros programas del equipo.
+
+Opciones del servidor añadidas
+------------------------------
+    -hostintitle           añade " @ equipo" al título de las ventanas de
+                           clientes que corren en otro equipo (multiwindow)
+    +byteswappedclients    acepta clientes con el otro orden de bytes (equipos
+                           big-endian). Por defecto se rechazan: es el código
+                           del servidor con más fallos de seguridad conocidos.
+
+El log (Xming.N.log en %TEMP%) indica la versión real de Windows, y "View log"
+de la bandeja lo abre con el editor asociado a .log.
+
+Licencia
+--------
+Este fork no es el Xming oficial ni tiene el apoyo de su autor, Colin Harrison.
+Los cambios del fork se publican con licencia MIT (LICENSE). Cada fichero
+original conserva su aviso de copyright y su licencia: X11R6.9 y el servidor de
+Windows (MIT/X11), XLaunch (MIT), GLX (SGI Free License B), Mesa (MIT),
+FreeType (FTL), zlib y las fuentes bitmap de X11. El resumen está en
+THIRD-PARTY-NOTICES.txt, y el build los reúne en dist\COPYING.txt, que es lo que
+abre el botón "View Licence" del diálogo About. Todas permiten modificar y
+redistribuir; la MIT del fork es compatible con todas ellas.
+
                        README for X11R6.9 and X11R7.0
 
                             The X.Org Foundation

@@ -201,6 +201,9 @@ winKeybdBell (int iPercent, DeviceIntPtr pDeviceInt,
    * sound on systems with a sound card or it will beep the PC speaker
    * on systems that do not have a sound card.
    */
+  /* Volumen 0 ("xset b off", "-f 0"): no sonar. */
+  if (iPercent <= 0)
+    return;
   MessageBeep (MB_OK);
 }
 

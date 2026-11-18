@@ -3959,6 +3959,10 @@ ProcEstablishConnection(ClientPtr client)
     if ((prefix->majorVersion != X_PROTOCOL) ||
 	(prefix->minorVersion != X_PROTOCOL_REVISION))
 	reason = "Protocol version mismatch";
+    /* Los manejadores SProc* (clientes de otro orden de bytes) son los que
+       más fallos de seguridad han tenido: solo se aceptan si se piden. */
+    else if (client->swapped && !AllowByteSwappedClients)
+	reason = "Prohibited client endianess, see the Xserver man page ";
     else
 	reason = ClientAuthorized(client,
 				  (unsigned short)prefix->nbytesAuthProto,

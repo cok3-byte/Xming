@@ -57,3 +57,11 @@
  * enlazado estático para no tener que distribuir libwinpthread-1.dll.
  */
 #define XWinPThreadLib		-Wl,-Bstatic -lpthread -Wl,-Bdynamic
+
+/*
+ * Identidad del fork: no presentarse como el Xming oficial (mingw.cf pone
+ * "Colin Harrison" y el foro original como contacto). Los fallos de este fork
+ * se informan en su repositorio.
+ */
+#define XVendorString		"Unofficial Xming fork (based on Xming by Colin Harrison)"
+#define XVendorContact		"https://github.com/cok3-byte/Xming/issues"

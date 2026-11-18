@@ -874,6 +874,9 @@ winUseMsg (void)
 	  "\tAlso sync (default) or ignore the X11 PRIMARY selection.\n"
 	  "\tWith -noprimary, selecting text in an X client does not\n"
 	  "\treplace the Windows clipboard.\n");
+  ErrorF ("-hostintitle / -nohostintitle\n"
+	  "\tIn multiwindow mode, append \" @ host\" to the title of windows\n"
+	  "\tof clients running on another computer (default: off).\n");
   ErrorF ("-clipboardtimeout ms\n"
 	  "\tMaximum wait for an X client during a clipboard transfer\n"
 	  "\t(100-60000, default 1000).\n");

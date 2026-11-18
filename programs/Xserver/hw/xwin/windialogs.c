@@ -615,38 +615,57 @@ winDisplayAboutDialog (winPrivScreenPtr pScreenPriv)
  * Process messages for the about dialog.
  */
 
+/*
+ * Abre un fichero de texto en el editor del sistema. Antes se lanzaba
+ * "notepad <fichero>" con CreateProcess, que busca notepad también en el
+ * directorio actual (un notepad.exe dejado ahí se ejecutaba) y copiaba la ruta
+ * en un búfer fijo de 256 bytes. Ahora se usa la asociación del fichero y, si
+ * no la hay, el Bloc de notas de la carpeta del sistema con la ruta entre comillas.
+ */
+static void
+winOpenTextFile (const char *pszPath, const char *pszCaption)
+{
+  char szSystem[MAX_PATH];
+  char *pszParams;
+
+  if ((int) ShellExecute (NULL, "open", pszPath, NULL, NULL, SW_SHOWNORMAL) > 32)
+    return;
+
+  pszParams = malloc (strlen (pszPath) + 3);
+  if (pszParams && GetSystemDirectory (szSystem, sizeof (szSystem) - 13) > 0)
+    {
+      strcat (szSystem, "\\notepad.exe");
+      sprintf (pszParams, "\"%s\"", pszPath);
+      if ((int) ShellExecute (NULL, "open", szSystem, pszParams, NULL,
+			      SW_SHOWNORMAL) > 32)
+	{
+	  free (pszParams);
+	  return;
+	}
+    }
+  free (pszParams);
+  MessageBox (NULL, pszPath, pszCaption, MB_OK | MB_ICONEXCLAMATION);
+}
+
+/* La licencia está junto al ejecutable, no en el directorio actual. */
 static void
 winDisplayLicence (void)
 {
-  char buffer[256];
-  STARTUPINFO start;
-  PROCESS_INFORMATION child;
-  HANDLE hFile;
+  char szPath[MAX_PATH];
+  char *pszSlash;
 
-  hFile = CreateFile("COPYING",GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
-  if (hFile == INVALID_HANDLE_VALUE) {
-	MessageBox(g_hDlgAbout, "Unable to read Xming licence file.", "Xming Error!", MB_OK | MB_ICONERROR);
-	return;
-  }
-  CloseHandle(hFile);
-  strcpy (buffer, "notepad ");
-  strcat (buffer, "COPYING");
-  memset (&start, 0, sizeof (start));
-  start.cb = sizeof (start);
-  start.dwFlags = STARTF_USESHOWWINDOW;
-  start.wShowWindow = SW_NORMAL;
-
-  memset (&child, 0, sizeof (child));
-
-  if (CreateProcess (NULL, buffer, NULL, NULL, FALSE, 0,
-		NULL, NULL, &start, &child))
-  {
-	CloseHandle (child.hThread);
-	CloseHandle (child.hProcess);
-  }
-  else
-	MessageBox(NULL, buffer, "View Licence Command Error!", MB_OK | MB_ICONEXCLAMATION);
-  return;
+  if (GetModuleFileName (NULL, szPath, sizeof (szPath)) == 0
+      || (pszSlash = strrchr (szPath, '\\')) == NULL
+      || (size_t) (pszSlash - szPath) + sizeof ("\\COPYING.txt") > sizeof (szPath))
+    return;
+  strcpy (pszSlash, "\\COPYING.txt");
+  if (GetFileAttributes (szPath) == INVALID_FILE_ATTRIBUTES)
+    {
+      MessageBox (g_hDlgAbout, "Unable to read the licence file (COPYING.txt).",
+		  PROJECT_NAME " Error!", MB_OK | MB_ICONERROR);
+      return;
+    }
+  winOpenTextFile (szPath, "View Licence Command Error!");
 }
 
 
@@ -746,7 +765,8 @@ winAboutDlgProc (HWND hwndDialog, UINT message,
 
 	case ID_ABOUT_RELEASES:
 	  {
-	     const char *	pszWinPath = "http://www.StraightRunning.com/XmingNotes/release.php";
+	     /* Botón "Fork": página de este fork, donde se informan los fallos */
+	     const char *	pszWinPath = "https://github.com/cok3-byte/Xming";
 	     int		iReturn;
 
 	     iReturn = (int) ShellExecute (NULL,
@@ -874,26 +894,5 @@ winAboutDlgProc (HWND hwndDialog, UINT message,
 void
 winDisplayLog (void)
 {
-  char buffer[256];
-  STARTUPINFO start;
-  PROCESS_INFORMATION child;
-
-  strcpy (buffer, "notepad ");
-  strcat (buffer, g_pszLogFile);
-  memset (&start, 0, sizeof (start));
-  start.cb = sizeof (start);
-  start.dwFlags = STARTF_USESHOWWINDOW;
-  start.wShowWindow = SW_NORMAL;
-
-  memset (&child, 0, sizeof (child));
-
-  if (CreateProcess (NULL, buffer, NULL, NULL, FALSE, 0,
-		NULL, NULL, &start, &child))
-  {
-	CloseHandle (child.hThread);
-	CloseHandle (child.hProcess);
-  }
-  else
-	MessageBox(NULL, buffer, "View Log Command Error!", MB_OK | MB_ICONEXCLAMATION);
-  return;
+  winOpenTextFile (g_pszLogFile, "View Log Command Error!");
 }
