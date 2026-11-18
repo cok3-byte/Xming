@@ -93,6 +93,10 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Los clientes con el otro orden de bytes se rechazan por defecto, como en xorg-server
   actual: el código que traduce sus peticiones (`SProc*`) es el de más fallos de seguridad
   conocidos y casi nadie lo necesita. `+byteswappedclients` los vuelve a aceptar.
+- "View log" y "View Licence" lanzaban `notepad` por nombre (se buscaba también en el
+  directorio actual) y copiaban la ruta en un búfer fijo de 256 bytes. Ahora abren el
+  fichero con su programa asociado o el Bloc de notas de la carpeta del sistema, y la
+  licencia se busca junto al ejecutable y no en el directorio actual.
 - XLaunch lanzaba `Xming`, `ssh` y `plink` por nombre, y Windows los busca también en el
   directorio actual: un ejecutable con ese nombre dejado ahí se ejecutaba en su lugar. Ahora
   usa rutas absolutas entre comillas.
