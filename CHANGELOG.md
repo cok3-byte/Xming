@@ -58,6 +58,8 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - `+byteswappedclients` para aceptar clientes con el otro orden de bytes (ver *Security*).
 - El log indica la versión real de Windows (antes decía "Vista" en Windows 11).
 ### Changed
+- El fork se identifica como tal: el *vendor string* del servidor, el contacto del log y
+  el diálogo About dicen que es un fork no oficial, y el botón "Fork" abre su repositorio.
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
   tráfico a través de SSH. `-bs` lo desactiva.

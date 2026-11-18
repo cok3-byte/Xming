@@ -765,7 +765,8 @@ winAboutDlgProc (HWND hwndDialog, UINT message,
 
 	case ID_ABOUT_RELEASES:
 	  {
-	     const char *	pszWinPath = "http://www.StraightRunning.com/XmingNotes/release.php";
+	     /* Botón "Fork": página de este fork, donde se informan los fallos */
+	     const char *	pszWinPath = "https://github.com/cok3-byte/Xming";
 	     int		iReturn;
 
 	     iReturn = (int) ShellExecute (NULL,
