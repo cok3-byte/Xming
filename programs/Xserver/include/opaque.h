@@ -71,6 +71,7 @@ extern int limitStackSpace;
 extern int limitNoFile;
 #endif
 extern Bool defeatAccessControl;
+extern Bool AllowByteSwappedClients;
 extern long maxBigRequestSize;
 extern Bool blackRoot;
 extern Bool whiteRoot;

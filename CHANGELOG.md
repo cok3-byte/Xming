@@ -53,6 +53,7 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
 - Licencia MIT para los cambios del fork (`LICENSE`) y `THIRD-PARTY-NOTICES.txt` con las
   licencias de cada componente. El build las reúne en `dist/COPYING.txt`, junto con la
   licencia de FreeType, que exige acompañar a los binarios.
+- `+byteswappedclients` para aceptar clientes con el otro orden de bytes (ver *Security*).
 ### Changed
 - Backing store activo por defecto (equivale a `+bs -wm`): al destapar una ventana X el
   servidor restaura su contenido en lugar de pedir al cliente que la redibuje, lo que ahorra
@@ -89,6 +90,9 @@ versión original de Xming (6.9.0.31); el historial anterior está en `ChangeLog
   botones al pulsar un botón lateral.
 
 ### Security
+- Los clientes con el otro orden de bytes se rechazan por defecto, como en xorg-server
+  actual: el código que traduce sus peticiones (`SProc*`) es el de más fallos de seguridad
+  conocidos y casi nadie lo necesita. `+byteswappedclients` los vuelve a aceptar.
 - XLaunch lanzaba `Xming`, `ssh` y `plink` por nombre, y Windows los busca también en el
   directorio actual: un ejecutable con ese nombre dejado ahí se ejecutaba en su lugar. Ahora
   usa rutas absolutas entre comillas.

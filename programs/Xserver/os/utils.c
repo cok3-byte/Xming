@@ -250,6 +250,9 @@ Bool PanoramiXExtensionDisabledHack = FALSE;
 
 int auditTrailLevel = 1;
 
+/* Clientes con el orden de bytes contrario: rechazados salvo +byteswappedclients */
+Bool AllowByteSwappedClients = FALSE;
+
 _X_EXPORT Bool Must_have_memory = FALSE;
 
 #ifdef AIXV3
@@ -591,6 +594,7 @@ void UseMsg(void)
     ErrorF("-audit int             set audit trail level\n");	
     ErrorF("-auth file             select authorization file\n");	
     ErrorF("-br                    create root window with black background\n");
+    ErrorF("-/+byteswappedclients  reject/accept clients of the other byte order\n");
     ErrorF("+bs                    enable any backing store support\n");
     ErrorF("-bs                    disable any backing store support\n");
     ErrorF("-c                     turns off key-click\n");
@@ -780,6 +784,10 @@ ProcessCommandLine(int argc, char *argv[])
 	}
 	else if ( strcmp( argv[i], "-br") == 0)
 	    blackRoot = TRUE;
+	else if ( strcmp( argv[i], "+byteswappedclients") == 0)
+	    AllowByteSwappedClients = TRUE;
+	else if ( strcmp( argv[i], "-byteswappedclients") == 0)
+	    AllowByteSwappedClients = FALSE;
 	else if ( strcmp( argv[i], "+bs") == 0)
 	    enableBackingStore = TRUE;
 	else if ( strcmp( argv[i], "-bs") == 0)
